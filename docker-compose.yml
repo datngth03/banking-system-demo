@@ -1,0 +1,226 @@
+version: '3.8'
+
+services:
+  # ==========================================
+  # CORE SERVICES (Required)
+  # ==========================================
+  
+  # Business Database
+  postgres-business:
+    image: postgres:16-alpine
+    container_name: bankingsystem-postgres-business
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: BankingSystemDb
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_business_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d BankingSystemDb"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bankingsystem-network
+
+  # Hangfire Database
+  postgres-hangfire:
+    image: postgres:16-alpine
+    container_name: bankingsystem-postgres-hangfire
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: BankingSystemHangfire
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres123
+      PGDATA: /var/lib/postgresql/data/pgdata
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_hangfire_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d BankingSystemHangfire"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - bankingsystem-network
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: bankingsystem-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 3
+    networks:
+      - bankingsystem-network
+
+  # Banking System API
+  banking-api:
+    build:
+      context: .
+      dockerfile: src/BankingSystem.API/Dockerfile
+    container_name: bankingsystem-api
+    restart: unless-stopped
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Docker
+      - ASPNETCORE_URLS=http://+:80
+      - ConnectionStrings__DefaultConnection=Host=postgres-business;Port=5432;Database=BankingSystemDb;Username=postgres;Password=postgres123;Pooling=true;MinPoolSize=5;MaxPoolSize=50;Include Error Detail=true
+      - ConnectionStrings__HangfireConnection=Host=postgres-hangfire;Port=5432;Database=BankingSystemHangfire;Username=postgres;Password=postgres123;Pooling=true;MinPoolSize=2;MaxPoolSize=20
+      - ConnectionStrings__Redis=redis:6379,abortConnect=false
+      - Logging__Seq__Url=http://seq
+      - ServiceName=BankingSystem.API
+      - ServiceVersion=1.0.0
+      - Environment=Docker
+    ports:
+      - "5000:80"
+    depends_on:
+      postgres-business:
+        condition: service_healthy
+      postgres-hangfire:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - bankingsystem-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
+
+  # ==========================================
+  # MONITORING SERVICES (Optional - can be disabled)
+  # ==========================================
+  
+  # Seq for centralized logging (Recommended for local dev)
+  seq:
+    image: datalust/seq:latest
+    container_name: bankingsystem-seq
+    restart: unless-stopped
+    environment:
+      ACCEPT_EULA: "Y"
+    ports:
+      - "5341:80"
+    volumes:
+      - seq_data:/data
+    networks:
+      - bankingsystem-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - monitoring
+      - full
+
+  # Prometheus for metrics collection (Optional)
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: bankingsystem-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+    networks:
+      - bankingsystem-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - monitoring
+      - full
+
+  # Grafana for visualization (Optional)
+  grafana:
+    image: grafana/grafana:latest
+    container_name: bankingsystem-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana_data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - bankingsystem-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - monitoring
+      - full
+
+  # ==========================================
+  # MANAGEMENT TOOLS (Optional)
+  # ==========================================
+  
+  # PgAdmin for database management (Optional)
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: bankingsystem-pgadmin
+    restart: unless-stopped
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@bankingsystem.com
+      PGADMIN_DEFAULT_PASSWORD: admin
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    depends_on:
+      - postgres-business
+      - postgres-hangfire
+    networks:
+      - bankingsystem-network
+    profiles:
+      - tools
+      - full
+
+volumes:
+  postgres_business_data:
+    driver: local
+  postgres_hangfire_data:
+    driver: local
+  redis_data:
+    driver: local
+  seq_data:
+    driver: local
+  prometheus_data:
+    driver: local
+  grafana_data:
+    driver: local
+  pgadmin_data:
+    driver: local
+
+networks:
+  bankingsystem-network:
+    driver: bridge
