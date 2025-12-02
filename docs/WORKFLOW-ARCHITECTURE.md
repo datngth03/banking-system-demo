@@ -38,7 +38,7 @@ build-and-test (with PostgreSQL & Redis services)
 - Run unit tests
 - Run integration tests
 - Code quality analysis
-- Security scanning
+- Security scanning (Trivy)
 - Generate test reports
 - Upload artifacts
 
@@ -179,31 +179,50 @@ Total: ~20 minutes + approval time
 
 ---
 
-## ? **REMOVED: ci-cd.yml**
+## ? **REMOVED WORKFLOWS:**
 
-### **Why removed?**
+### **1. ci-cd.yml (REMOVED)**
 
-File `ci-cd.yml` was **duplicate** and **outdated**:
-
-```yaml
-# ci-cd.yml (REMOVED)
+**Why removed?**
 - No PostgreSQL/Redis services
 - Less comprehensive testing
 - Duplicated effort
 - Conflicts with ci.yml and cd.yml
-```
 
 **Better approach:** Separate CI and CD workflows with proper dependency.
 
 ---
 
+### **2. code-quality.yml (REMOVED)**
+
+**Why removed?**
+- Duplicated code analysis (already in ci.yml)
+- Duplicated build & test
+- Required SonarCloud token (not setup)
+- CodeQL can be added to ci.yml if needed
+
+**What was lost:**
+- ? SonarCloud integration (can add back if needed)
+- ? Weekly scheduled runs (can add to ci.yml)
+- ? Dependency license review (can add to ci.yml)
+- ? Basic code analysis: **Still available in ci.yml**
+- ? Security scanning: **Still available in ci.yml (Trivy)**
+
+**What we kept:**
+- ? Code analysis via `dotnet build /p:AnalysisMode=AllEnabledByDefault`
+- ? Security scanning via Trivy
+- ? Dependency vulnerability check via `dotnet list package --vulnerable`
+
+---
+
 ## ?? **COMPARISON TABLE:**
 
-| Workflow | Trigger | Purpose | Services | Dependency |
-|----------|---------|---------|----------|------------|
-| **ci.yml** | Push, PR | Build, Test, Quality | PostgreSQL, Redis | None |
-| **cd.yml** | CI success, Tags | Docker, Deploy | None | CI must pass |
-| ~~ci-cd.yml~~ | ~~Push, PR~~ | ~~Everything~~ | ~~None~~ | ~~REMOVED~~ |
+| Workflow | Trigger | Purpose | Services | Dependency | Status |
+|----------|---------|---------|----------|------------|--------|
+| **ci.yml** | Push, PR | Build, Test, Quality | PostgreSQL, Redis | None | ? **ACTIVE** |
+| **cd.yml** | CI success, Tags | Docker, Deploy | None | CI must pass | ? **ACTIVE** |
+| ~~ci-cd.yml~~ | ~~Push, PR~~ | ~~Everything~~ | ~~None~~ | ~~None~~ | ? **REMOVED** |
+| ~~code-quality.yml~~ | ~~Push, PR, Schedule~~ | ~~Code Quality~~ | ~~None~~ | ~~None~~ | ? **REMOVED** |
 
 ---
 
@@ -229,6 +248,11 @@ on:
 if: github.ref == 'refs/heads/main'
 ```
 
+### **4. Avoid Duplication:**
+- ? Multiple workflows doing same thing
+- ? Consolidate related checks in one workflow
+- ? Use job dependencies (`needs:`)
+
 ---
 
 ## ?? **DAILY WORKFLOW:**
@@ -249,6 +273,7 @@ git push origin feature/my-feature
 # - Build ?
 # - Tests ?
 # - Code Quality ?
+# - Security Scan ?
 
 # 5. Merge PR after review
 # GitHub merges to main
@@ -292,6 +317,7 @@ git push origin v1.0.0
 
 1. **ci.yml** - Comprehensive CI pipeline
    - Builds, tests, quality checks
+   - Security scanning (Trivy)
    - Runs on push & PR
    - Independent
 
@@ -302,6 +328,8 @@ git push origin v1.0.0
 
 3. ~~**ci-cd.yml**~~ - **REMOVED** (duplicate)
 
+4. ~~**code-quality.yml**~~ - **REMOVED** (duplicate + requires SonarCloud token)
+
 ### **Benefits:**
 
 ? **Clear separation:** CI vs CD
@@ -309,6 +337,7 @@ git push origin v1.0.0
 ? **Safe deployment:** CD only runs if CI passes
 ? **Flexible:** Manual override available
 ? **Efficient:** No wasted resources
+? **Simple:** Only 2 workflows to maintain
 
 ---
 
@@ -321,4 +350,24 @@ git push origin v1.0.0
 
 **Lu?ng:** Push ? CI ? (if success) ? CD ? Deploy
 
-**No more confusion!** ??
+**Clean, simple, efficient!** ??
+
+---
+
+## ?? **OPTIONAL: Add SonarCloud Later**
+
+If you need SonarCloud in the future:
+
+```yaml
+# Add to ci.yml security-scan job
+- name: SonarCloud Scan
+  uses: SonarSource/sonarcloud-github-action@master
+  env:
+    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+```
+
+**Requirements:**
+1. Create SonarCloud account
+2. Add `SONAR_TOKEN` to GitHub secrets
+3. Configure sonar-project.properties
