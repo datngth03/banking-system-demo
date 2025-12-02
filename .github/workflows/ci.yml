@@ -16,6 +16,46 @@ jobs:
     name: Build and Test
     runs-on: ubuntu-latest
     
+    # Add services for integration tests
+    services:
+      postgres-business:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: BankingSystemDb
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      postgres-hangfire:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_DB: BankingSystemHangfire
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres123
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+    
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
@@ -39,18 +79,22 @@ jobs:
           --configuration Release \
           --no-build \
           --verbosity normal \
-          --logger "trx;LogFileName=test-results.trx" \
+          --logger "trx;LogFileName=test-results-unit.trx" \
           --collect:"XPlat Code Coverage" \
           --results-directory ./TestResults
 
     - name: Run integration tests
+      env:
+        ConnectionStrings__DefaultConnection: "Host=localhost;Port=5432;Database=BankingSystemDb;Username=postgres;Password=postgres123"
+        ConnectionStrings__HangfireConnection: "Host=localhost;Port=5433;Database=BankingSystemHangfire;Username=postgres;Password=postgres123"
+        ConnectionStrings__Redis: "localhost:6379"
       run: |
         dotnet test tests/BankingSystem.IntegrationTests/BankingSystem.IntegrationTests.csproj \
-          --configuration Release \
           --no-build \
+          --configuration Release \
           --verbosity normal \
-          --logger "trx;LogFileName=integration-test-results.trx" \
-          --results-directory ./TestResults
+          --logger "trx;LogFileName=test-results-integration.trx" \
+          --collect:"XPlat Code Coverage"
 
     - name: Publish test results
       uses: dorny/test-reporter@v1
