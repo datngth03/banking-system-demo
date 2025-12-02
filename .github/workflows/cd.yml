@@ -1,10 +1,15 @@
 name: CD - Build and Deploy
 
 on:
-  push:
-    branches: [ main ]
-    tags:
-      - 'v*.*.*'
+  # ? Ch? ch?y SAU KHI CI workflow hoàn thành
+  workflow_run:
+    workflows: ["CI - Build and Test"]  # ? Tên c?a CI workflow
+    types:
+      - completed
+    branches:
+      - main
+  
+  # Manual trigger v?n gi?
   workflow_dispatch:
     inputs:
       environment:
@@ -15,6 +20,11 @@ on:
         options:
           - staging
           - production
+  
+  # Tag push v?n gi?
+  push:
+    tags:
+      - 'v*.*.*'
 
 env:
   REGISTRY: ghcr.io
@@ -22,9 +32,35 @@ env:
   DOTNET_VERSION: '8.0.x'
 
 jobs:
+  # ? Ki?m tra CI workflow status
+  check-ci-status:
+    name: Check CI Status
+    runs-on: ubuntu-latest
+    # Ch? ch?y n?u trigger là workflow_run
+    if: github.event_name == 'workflow_run'
+    steps:
+      - name: Check CI workflow result
+        if: github.event.workflow_run.conclusion != 'success'
+        run: |
+          echo "CI workflow failed or was cancelled!"
+          echo "Conclusion: ${{ github.event.workflow_run.conclusion }}"
+          exit 1
+      
+      - name: CI passed
+        run: |
+          echo "? CI workflow passed successfully"
+          echo "Proceeding with CD..."
+
   build-docker-image:
     name: Build Docker Image
     runs-on: ubuntu-latest
+    # Ch?y sau check-ci-status ho?c n?u là manual/tag trigger
+    needs: [check-ci-status]
+    if: |
+      always() && 
+      (needs.check-ci-status.result == 'success' || 
+       github.event_name == 'workflow_dispatch' || 
+       github.event_name == 'push')
     permissions:
       contents: read
       packages: write
