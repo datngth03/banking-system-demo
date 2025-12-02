@@ -27,7 +27,7 @@ public class RefreshTokenHandler : IRequestHandler<RefreshTokenCommand, AuthResp
         if (principal == null)
             throw new UnauthorizedAccessException("Invalid token");
 
-        var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+        var userIdClaim = principal.FindFirst(ClaimTypes.NameIdentifier)?.Value
                          ?? principal.FindFirst("sub")?.Value;
 
         if (string.IsNullOrEmpty(userIdClaim) || !Guid.TryParse(userIdClaim, out var userId))

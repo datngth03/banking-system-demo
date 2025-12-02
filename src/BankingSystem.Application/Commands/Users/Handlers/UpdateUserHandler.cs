@@ -20,7 +20,7 @@ public class UpdateUserHandler : IRequestHandler<UpdateUserCommand, Unit>
     public async Task<Unit> Handle(UpdateUserCommand request, CancellationToken cancellationToken)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
-        
+
         if (user == null)
             throw new NotFoundException(string.Format(ValidationMessages.UserNotFound, request.Id));
 

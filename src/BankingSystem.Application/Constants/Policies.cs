@@ -10,11 +10,11 @@ public static class Policies
     public const string RequireManagerRole = "RequireManagerRole";
     public const string RequireSupportRole = "RequireSupportRole";
     public const string RequireUserRole = "RequireUserRole";
-    
+
     // Combined policies
     public const string RequireAdminOrManager = "RequireAdminOrManager";
     public const string RequireStaffRole = "RequireStaffRole";
-    
+
     // Feature-based policies
     public const string CanManageUsers = "CanManageUsers";
     public const string CanManageAccounts = "CanManageAccounts";

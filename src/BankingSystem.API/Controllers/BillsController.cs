@@ -42,7 +42,7 @@ public class BillsController : ControllerBase
     public async Task<IActionResult> GetPendingBills([FromQuery] Guid accountId)
     {
         _logger.LogInformation("Getting pending bills for account {AccountId}", accountId);
-        
+
         var query = new GetPendingBillsQuery { AccountId = accountId };
         var result = await _mediator.Send(query);
         return Ok(result);
@@ -72,7 +72,7 @@ public class BillsController : ControllerBase
             return BadRequest(new { error = "ID mismatch" });
 
         _logger.LogInformation("Paying bill {BillId} from account {AccountId}", id, command.AccountId);
-        
+
         await _mediator.Send(command);
         return Ok(new { message = "Bill paid successfully" });
     }

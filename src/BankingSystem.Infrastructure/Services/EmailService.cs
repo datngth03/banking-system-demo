@@ -57,7 +57,7 @@ public class EmailService : IEmailService
                 IsBodyHtml = true
             };
             mailMessage.To.Add(to);
-            
+
             foreach (var ccEmail in cc)
             {
                 mailMessage.CC.Add(ccEmail);

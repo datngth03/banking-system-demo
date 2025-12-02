@@ -14,7 +14,7 @@ public class CacheService : ICacheService
     private readonly IDistributedCache _distributedCache;
     private readonly ILogger<CacheService> _logger;
     private readonly BankingSystemMetrics? _metrics;
-    
+
     private static readonly JsonSerializerOptions _jsonOptions = new()
     {
         PropertyNameCaseInsensitive = true,
@@ -22,7 +22,7 @@ public class CacheService : ICacheService
     };
 
     public CacheService(
-        IDistributedCache distributedCache, 
+        IDistributedCache distributedCache,
         ILogger<CacheService> logger,
         BankingSystemMetrics? metrics = null)
     {
@@ -36,7 +36,7 @@ public class CacheService : ICacheService
         try
         {
             var cachedData = await _distributedCache.GetStringAsync(key, cancellationToken);
-            
+
             if (string.IsNullOrEmpty(cachedData))
             {
                 _logger.LogDebug("Cache miss for key: {Key}", key);
@@ -61,15 +61,15 @@ public class CacheService : ICacheService
         try
         {
             var serializedData = JsonSerializer.Serialize(value, _jsonOptions);
-            
+
             var options = new DistributedCacheEntryOptions
             {
                 AbsoluteExpirationRelativeToNow = absoluteExpiration ?? TimeSpan.FromMinutes(10)
             };
 
             await _distributedCache.SetStringAsync(key, serializedData, options, cancellationToken);
-            
-            _logger.LogDebug("Cache set for key: {Key}, Expiration: {Expiration}",  key, options.AbsoluteExpirationRelativeToNow);
+
+            _logger.LogDebug("Cache set for key: {Key}, Expiration: {Expiration}", key, options.AbsoluteExpirationRelativeToNow);
         }
         catch (Exception ex)
         {

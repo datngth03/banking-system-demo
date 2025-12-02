@@ -6,7 +6,7 @@ public class InvalidCardException : DomainException
     {
     }
 
-    public InvalidCardException(string message, Exception innerException) 
+    public InvalidCardException(string message, Exception innerException)
         : base(message, innerException)
     {
     }

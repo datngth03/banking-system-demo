@@ -60,8 +60,8 @@ public class WithdrawHandler : IRequestHandler<WithdrawCommand, Unit>
         if (account.Balance.IsLessThan(withdrawAmount))
         {
             throw new InsufficientFundsException(
-                string.Format(ValidationMessages.InsufficientFundsDetail, 
-                    account.Balance.Amount, 
+                string.Format(ValidationMessages.InsufficientFundsDetail,
+                    account.Balance.Amount,
                     request.Amount));
         }
 

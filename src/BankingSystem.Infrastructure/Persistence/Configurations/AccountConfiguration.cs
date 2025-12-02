@@ -35,24 +35,24 @@ public class AccountConfiguration : IEntityTypeConfiguration<Account>
             .OnDelete(DeleteBehavior.Cascade);
 
         // ============ INDEXES FOR PERFORMANCE ============
-        
+
         // Unique index for account number (lookups by account number)
         builder.HasIndex(a => a.AccountNumber)
             .IsUnique()
             .HasDatabaseName("IX_Accounts_AccountNumber");
-        
+
         // Index for user account lookups (most common query)
         builder.HasIndex(a => a.UserId)
             .HasDatabaseName("IX_Accounts_UserId");
-        
+
         // Composite index for active accounts by user (GetMyAccounts query)
         builder.HasIndex(a => new { a.UserId, a.IsActive })
             .HasDatabaseName("IX_Accounts_UserId_IsActive");
-        
+
         // Index for account type filtering
         builder.HasIndex(a => a.AccountType)
             .HasDatabaseName("IX_Accounts_AccountType");
-        
+
         // Index for active status queries
         builder.HasIndex(a => a.IsActive)
             .HasDatabaseName("IX_Accounts_IsActive");

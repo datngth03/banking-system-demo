@@ -36,13 +36,13 @@ public class TransferFundsHandler : IRequestHandler<TransferFundsCommand, Unit>
         var fromAccount = await _context.Accounts
             .Include(a => a.User)
             .FirstOrDefaultAsync(a => a.Id == request.FromAccountId, cancellationToken);
-            
+
         if (fromAccount == null)
             throw new NotFoundException(string.Format(ValidationMessages.AccountNotFound, request.FromAccountId));
 
         var toAccount = await _context.Accounts
             .FirstOrDefaultAsync(a => a.Id == request.ToAccountId, cancellationToken);
-            
+
         if (toAccount == null)
             throw new NotFoundException(string.Format(ValidationMessages.AccountNotFound, request.ToAccountId));
 
@@ -54,7 +54,7 @@ public class TransferFundsHandler : IRequestHandler<TransferFundsCommand, Unit>
                 _currentUserService.UserId,
                 fromAccount.Id,
                 fromAccount.UserId);
-                
+
             throw new ForbiddenException("You can only transfer from your own accounts");
         }
 
@@ -105,14 +105,14 @@ public class TransferFundsHandler : IRequestHandler<TransferFundsCommand, Unit>
         _context.Transactions.Add(creditTransaction);
 
         await _context.SaveChangesAsync(cancellationToken);
-        
+
         _logger.LogInformation(
             "Transfer completed: {Amount} from account {FromAccount} to {ToAccount} by user {UserId}",
             transferAmount.Amount,
             fromAccount.AccountNumber,
             toAccount.AccountNumber,
             _currentUserService.UserId);
-            
+
         return Unit.Value;
     }
 

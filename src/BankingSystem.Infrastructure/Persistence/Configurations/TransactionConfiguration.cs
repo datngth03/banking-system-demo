@@ -31,35 +31,35 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         });
 
         // ============ INDEXES FOR PERFORMANCE ============
-        
+
         // Unique index for reference number (lookups and reconciliation)
         builder.HasIndex(t => t.ReferenceNumber)
             .IsUnique()
             .HasDatabaseName("IX_Transactions_ReferenceNumber");
-        
+
         // Index for account transactions (most common query)
         builder.HasIndex(t => t.AccountId)
             .HasDatabaseName("IX_Transactions_AccountId");
-        
+
         // Index for transaction date (date range queries)
         builder.HasIndex(t => t.TransactionDate)
             .HasDatabaseName("IX_Transactions_TransactionDate")
             .IsDescending(); // Most recent first
-        
+
         // Index for created date (audit queries)
         builder.HasIndex(t => t.CreatedAt)
             .HasDatabaseName("IX_Transactions_CreatedAt")
             .IsDescending();
-        
+
         // Composite index for account + date range queries (GetTransactionHistory)
         builder.HasIndex(t => new { t.AccountId, t.TransactionDate })
             .HasDatabaseName("IX_Transactions_AccountId_TransactionDate")
             .IsDescending();
-        
+
         // Composite index for account + transaction type (filtering)
         builder.HasIndex(t => new { t.AccountId, t.TransactionType })
             .HasDatabaseName("IX_Transactions_AccountId_TransactionType");
-        
+
         // Index for transaction type (reporting)
         builder.HasIndex(t => t.TransactionType)
             .HasDatabaseName("IX_Transactions_TransactionType");

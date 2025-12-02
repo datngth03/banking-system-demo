@@ -6,7 +6,7 @@ public class NotFoundException : BankingApplicationException
     {
     }
 
-    public NotFoundException(string entityName, object key) 
+    public NotFoundException(string entityName, object key)
         : base($"{entityName} with id '{key}' was not found.")
     {
     }

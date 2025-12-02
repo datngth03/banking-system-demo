@@ -59,7 +59,7 @@ public static class RateLimitExtensions
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
             {
                 var clientId = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
-                
+
                 return RateLimitPartition.GetFixedWindowLimiter(clientId, _ => new FixedWindowRateLimiterOptions
                 {
                     PermitLimit = 200, // Global limit per IP
@@ -72,13 +72,13 @@ public static class RateLimitExtensions
             options.OnRejected = async (context, cancellationToken) =>
             {
                 context.HttpContext.Response.StatusCode = StatusCodes.Status429TooManyRequests;
-                
+
                 await context.HttpContext.Response.WriteAsJsonAsync(new
                 {
                     error = "Too many requests",
                     message = "Rate limit exceeded. Please try again later.",
-                    retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter) 
-                        ? retryAfter.ToString() 
+                    retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
+                        ? retryAfter.ToString()
                         : "60 seconds"
                 }, cancellationToken);
             };

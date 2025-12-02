@@ -26,7 +26,7 @@ public class AccountsController : ControllerBase
     private readonly IAccountService _accountService;
 
     public AccountsController(
-        IMediator mediator, 
+        IMediator mediator,
         ILogger<AccountsController> logger,
         IAccountService accountService)
     {
@@ -54,14 +54,14 @@ public class AccountsController : ControllerBase
         // Users can only create accounts for themselves, staff can create for anyone
         var userId = GetCurrentUserId();
         var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-        
+
         if (userRole == Roles.User && command.UserId != userId)
         {
             return Forbid();
         }
 
         _logger.LogInformation("Creating account for user {UserId}", command.UserId);
-        
+
         var accountId = await _mediator.Send(command);
         return CreatedAtAction(nameof(GetAccountDetails), new { id = accountId }, new { id = accountId });
     }
@@ -79,10 +79,10 @@ public class AccountsController : ControllerBase
     {
         var userId = GetCurrentUserId();
         _logger.LogInformation("Getting accounts for user {UserId}", userId);
-        
+
         var query = new GetAccountsByUserIdQuery { UserId = userId };
         var result = await _mediator.Send(query);
-        
+
         return Ok(result);
     }
 
@@ -102,10 +102,10 @@ public class AccountsController : ControllerBase
     public async Task<IActionResult> GetUserAccounts(Guid userId)
     {
         _logger.LogInformation("Getting accounts for user {UserId}", userId);
-        
+
         var query = new GetAccountsByUserIdQuery { UserId = userId };
         var result = await _mediator.Send(query);
-        
+
         return Ok(result);
     }
 
@@ -125,14 +125,14 @@ public class AccountsController : ControllerBase
     {
         var query = new GetAccountDetailsQuery { AccountId = id };
         var result = await _mediator.Send(query);
-        
+
         if (result == null)
             return NotFound(new { message = "Account not found" });
 
         // Check authorization: Users can only view their own accounts
         var userId = GetCurrentUserId();
         var userRole = User.FindFirst(ClaimTypes.Role)?.Value;
-        
+
         if (userRole == Roles.User && result.UserId != userId)
         {
             _logger.LogWarning(
@@ -140,7 +140,7 @@ public class AccountsController : ControllerBase
                 userId, id, result.UserId);
             return Forbid();
         }
-        
+
         return Ok(result);
     }
 
@@ -230,9 +230,9 @@ public class AccountsController : ControllerBase
     {
         await ValidateAccountOwnership(command.FromAccountId);
 
-        _logger.LogInformation("Transfer from {FromAccountId} to {ToAccountId}, Amount: {Amount}", 
+        _logger.LogInformation("Transfer from {FromAccountId} to {ToAccountId}, Amount: {Amount}",
             command.FromAccountId, command.ToAccountId, command.Amount);
-        
+
         await _mediator.Send(command);
         return Ok(new { message = "Transfer completed successfully" });
     }
@@ -255,7 +255,7 @@ public class AccountsController : ControllerBase
     public async Task<IActionResult> CloseAccount(Guid id)
     {
         _logger.LogInformation("Closing account {AccountId}", id);
-        
+
         var command = new CloseAccountCommand { AccountId = id };
         await _mediator.Send(command);
         return Ok(new { message = "Account closed successfully" });
@@ -263,7 +263,7 @@ public class AccountsController : ControllerBase
 
     private Guid GetCurrentUserId()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                          ?? User.FindFirst("sub")?.Value;
         return Guid.Parse(userIdClaim!);
     }
@@ -279,7 +279,7 @@ public class AccountsController : ControllerBase
 
         // Regular users can only operate on their own accounts
         var account = await _accountService.GetAccountByIdAsync(accountId);
-        
+
         if (account == null)
             throw new Application.Exceptions.NotFoundException(
                 string.Format(Application.Constants.ValidationMessages.AccountNotFound, accountId));

@@ -27,7 +27,7 @@ public class GetCardsByUserIdHandler : IRequestHandler<GetCardsByUserIdQuery, IE
         // 1. Try cache first (3-minute TTL)
         var cacheKey = $"card:user:{request.UserId}:page:{request.PageNumber}";
         var cachedCards = await _cacheService.GetAsync<List<CardDto>>(cacheKey, cancellationToken);
-        
+
         if (cachedCards != null)
             return cachedCards;
 
@@ -41,10 +41,11 @@ public class GetCardsByUserIdHandler : IRequestHandler<GetCardsByUserIdQuery, IE
             .ToListAsync(cancellationToken);
 
         // 3. Decrypt sensitive data and map to DTOs
-        var cardDtos = cards.Select(c => {
+        var cardDtos = cards.Select(c =>
+        {
             // Decrypt sensitive data
             c.DecryptSensitiveData(_encryptionService.Decrypt);
-            
+
             return new CardDto
             {
                 Id = c.Id,

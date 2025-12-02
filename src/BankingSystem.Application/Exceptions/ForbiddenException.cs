@@ -6,7 +6,7 @@ public class ForbiddenException : BankingApplicationException
     {
     }
 
-    public ForbiddenException(string message, Exception innerException) 
+    public ForbiddenException(string message, Exception innerException)
         : base(message, innerException)
     {
     }

@@ -9,7 +9,7 @@ public static class Roles
     public const string Manager = "Manager";
     public const string Support = "Support";
     public const string User = "User";
-    
+
     // Combined roles
     public const string AdminOrManager = "Admin,Manager";
     public const string AdminOrSupport = "Admin,Support";

@@ -39,7 +39,7 @@ public class TransactionsController : ControllerBase
     public async Task<IActionResult> GetUserTransactions(Guid userId)
     {
         _logger.LogInformation("Getting transactions for user {UserId}", userId);
-        
+
         var query = new GetTransactionsByUserIdQuery { UserId = userId };
         var result = await _mediator.Send(query);
         return Ok(result);
@@ -104,7 +104,7 @@ public class TransactionsController : ControllerBase
         };
 
         // Parse transaction type if provided
-        if (!string.IsNullOrEmpty(transactionType) && 
+        if (!string.IsNullOrEmpty(transactionType) &&
             Enum.TryParse<Domain.Enums.TransactionType>(transactionType, true, out var type))
         {
             query.TransactionType = type;
@@ -129,7 +129,7 @@ public class TransactionsController : ControllerBase
     public async Task<IActionResult> GetTransactionReceipt(Guid id)
     {
         _logger.LogInformation("Getting receipt for transaction {TransactionId}", id);
-        
+
         var query = new GetTransactionReceiptQuery { TransactionId = id };
         var result = await _mediator.Send(query);
         return Ok(result);

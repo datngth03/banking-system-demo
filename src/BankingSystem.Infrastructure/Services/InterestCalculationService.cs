@@ -131,8 +131,8 @@ public class InterestCalculationService : IInterestCalculationService
         _logger.LogInformation("Starting interest application for all eligible accounts");
 
         var eligibleAccounts = await _context.Accounts
-            .Where(a => a.IsActive && 
-                       (a.AccountType == AccountType.Savings || 
+            .Where(a => a.IsActive &&
+                       (a.AccountType == AccountType.Savings ||
                         a.AccountType == AccountType.MoneyMarket ||
                         a.AccountType == AccountType.CertificateOfDeposit))
             .ToListAsync(cancellationToken);
@@ -151,8 +151,8 @@ public class InterestCalculationService : IInterestCalculationService
             }
             catch (Exception ex)
             {
-                _logger.LogError(ex, 
-                    "Error applying interest to account {AccountId}", 
+                _logger.LogError(ex,
+                    "Error applying interest to account {AccountId}",
                     account.Id);
             }
         }

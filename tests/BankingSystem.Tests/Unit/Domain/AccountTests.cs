@@ -66,7 +66,7 @@ public class AccountTests
     {
         // Arrange
         var account = CreateTestAccount(0m);
-        
+
         // Act
         account.IsActive = false;
         account.ClosedAt = DateTime.UtcNow;
@@ -105,7 +105,7 @@ public class AccountTests
     {
         // Arrange
         var account = CreateTestAccount(1000m);
-        
+
         // Act
         account.IBAN = "GB82WEST12345698765432";
         account.BIC = "DEUTDEFF";
@@ -120,7 +120,7 @@ public class AccountTests
     {
         // Arrange
         var beforeCreation = DateTime.UtcNow;
-        
+
         // Act
         var account = CreateTestAccount(1000m);
         var afterCreation = DateTime.UtcNow;

@@ -36,7 +36,7 @@ public class CardConfiguration : IEntityTypeConfiguration<Card>
         builder.Property(c => c.BlockedReason).HasMaxLength(256);
 
         // ============ INDEXES FOR PERFORMANCE ============
-        
+
         // Unique index on encrypted card number (for uniqueness check)
         builder.HasIndex(c => c.EncryptedCardNumber)
             .IsUnique()

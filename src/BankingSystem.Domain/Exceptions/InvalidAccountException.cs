@@ -6,7 +6,7 @@ public class InvalidAccountException : DomainException
     {
     }
 
-    public InvalidAccountException(string message, Exception innerException) 
+    public InvalidAccountException(string message, Exception innerException)
         : base(message, innerException)
     {
     }

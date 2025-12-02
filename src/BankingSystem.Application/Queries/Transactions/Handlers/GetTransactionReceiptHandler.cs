@@ -39,7 +39,7 @@ public class GetTransactionReceiptHandler : IRequestHandler<GetTransactionReceip
         }
 
         // Authorization: Users can only get receipts for their own transactions
-        if (!_currentUserService.IsStaff && 
+        if (!_currentUserService.IsStaff &&
             transaction.Account!.UserId != _currentUserService.UserId)
         {
             _logger.LogWarning(
@@ -47,7 +47,7 @@ public class GetTransactionReceiptHandler : IRequestHandler<GetTransactionReceip
                 _currentUserService.UserId,
                 transaction.Id,
                 transaction.Account.UserId);
-                
+
             throw new ForbiddenException("You can only view receipts for your own transactions");
         }
 
@@ -67,17 +67,17 @@ public class GetTransactionReceiptHandler : IRequestHandler<GetTransactionReceip
             ReferenceNumber = transaction.ReferenceNumber,
             TransactionDate = transaction.TransactionDate,
             TransactionType = transaction.TransactionType.ToString(),
-            
+
             AccountNumber = transaction.Account!.AccountNumber,
             AccountHolderName = $"{transaction.Account.User!.FirstName} {transaction.Account.User.LastName}",
-            
+
             Amount = transaction.Amount.Amount,
             Currency = transaction.Amount.Currency,
             BalanceAfter = transaction.BalanceAfter.Amount,
             Description = transaction.Description ?? string.Empty,
-            
+
             RelatedAccountNumber = relatedAccountNumber,
-            
+
             GeneratedAt = DateTime.UtcNow,
             ReceiptNumber = $"RCP-{transaction.ReferenceNumber}",
             Status = "Completed"

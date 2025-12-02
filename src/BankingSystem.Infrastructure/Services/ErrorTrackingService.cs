@@ -12,7 +12,7 @@ public class ErrorTrackingService : IErrorTrackingService
 {
     private readonly ILogger<ErrorTrackingService> _logger;
     private readonly BankingSystemMetrics _metrics;
-    
+
     // In-memory storage for recent errors (for statistics)
     // In production, this should be stored in database or external service
     private static readonly ConcurrentQueue<ErrorRecord> _recentErrors = new();
@@ -27,8 +27,8 @@ public class ErrorTrackingService : IErrorTrackingService
     }
 
     public async Task TrackErrorAsync(
-        Exception exception, 
-        Dictionary<string, object>? context = null, 
+        Exception exception,
+        Dictionary<string, object>? context = null,
         string? userId = null)
     {
         var errorRecord = new ErrorRecord
@@ -72,9 +72,9 @@ public class ErrorTrackingService : IErrorTrackingService
                 _ => LogLevel.Information
             };
 
-            _logger.Log(logLevel, exception, 
-                "Error tracked: {ExceptionType} - {Message}", 
-                errorRecord.ExceptionType, 
+            _logger.Log(logLevel, exception,
+                "Error tracked: {ExceptionType} - {Message}",
+                errorRecord.ExceptionType,
                 errorRecord.Message);
         }
 
@@ -134,14 +134,14 @@ public class ErrorTrackingService : IErrorTrackingService
             // Critical - data integrity or system failure
             InvalidOperationException => ErrorSeverity.Critical,
             NullReferenceException => ErrorSeverity.Critical,
-            
+
             // High - business logic failures
             UnauthorizedAccessException => ErrorSeverity.High,
             ArgumentException => ErrorSeverity.High,
-            
+
             // Medium - expected failures
             TimeoutException => ErrorSeverity.Medium,
-            
+
             // Default
             _ => ErrorSeverity.Medium
         };

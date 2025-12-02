@@ -40,7 +40,7 @@ public class GetTransactionsByUserIdPagedHandler : IRequestHandler<GetTransactio
                 "User {CurrentUserId} attempted to view transactions of user {RequestedUserId}",
                 _currentUserService.UserId,
                 request.UserId);
-                
+
             throw new ForbiddenException("You can only view your own transactions");
         }
 
@@ -84,7 +84,7 @@ public class GetTransactionsByUserIdPagedHandler : IRequestHandler<GetTransactio
         if (!string.IsNullOrWhiteSpace(request.SearchTerm))
         {
             var searchTerm = request.SearchTerm.ToLower();
-            query = query.Where(t => 
+            query = query.Where(t =>
                 t.Description!.ToLower().Contains(searchTerm) ||
                 t.ReferenceNumber.ToLower().Contains(searchTerm));
         }

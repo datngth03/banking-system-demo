@@ -37,7 +37,7 @@ public class GetTransactionsByUserIdHandler : IRequestHandler<GetTransactionsByU
                 "User {CurrentUserId} attempted to view transactions of user {RequestedUserId}",
                 _currentUserService.UserId,
                 request.UserId);
-                
+
             throw new ForbiddenException("You can only view your own transactions");
         }
 

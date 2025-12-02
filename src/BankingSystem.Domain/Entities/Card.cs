@@ -8,15 +8,15 @@ public class Card : IEntity
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
     public Guid AccountId { get; set; }
-    
+
     // Encrypted fields (stored in database)
     public string EncryptedCardNumber { get; set; } = string.Empty;
     public string EncryptedCVV { get; set; } = string.Empty;
-    
+
     // Plain text fields (not stored in database)
     public string CardNumber { get; set; } = string.Empty;
     public string CVV { get; set; } = string.Empty;
-    
+
     public string CardHolderName { get; set; } = string.Empty;
     public DateTime ExpiryDate { get; set; }
     public CardStatus Status { get; set; } = CardStatus.Active;
@@ -47,7 +47,7 @@ public class Card : IEntity
     {
         if (!string.IsNullOrEmpty(CardNumber))
             EncryptedCardNumber = encryptFunc(CardNumber);
-        
+
         if (!string.IsNullOrEmpty(CVV))
             EncryptedCVV = encryptFunc(CVV);
     }
@@ -56,7 +56,7 @@ public class Card : IEntity
     {
         if (!string.IsNullOrEmpty(EncryptedCardNumber))
             CardNumber = decryptFunc(EncryptedCardNumber);
-        
+
         if (!string.IsNullOrEmpty(EncryptedCVV))
             CVV = decryptFunc(EncryptedCVV);
     }

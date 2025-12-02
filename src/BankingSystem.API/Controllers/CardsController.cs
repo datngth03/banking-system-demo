@@ -24,7 +24,7 @@ public class CardsController : ControllerBase
     private readonly IAccountService _accountService;
 
     public CardsController(
-        IMediator mediator, 
+        IMediator mediator,
         ILogger<CardsController> logger,
         IAccountService accountService)
     {
@@ -46,10 +46,10 @@ public class CardsController : ControllerBase
     {
         var userId = GetCurrentUserId();
         _logger.LogInformation("Getting cards for user {UserId}", userId);
-        
+
         var query = new GetCardsByUserIdQuery { UserId = userId };
         var result = await _mediator.Send(query);
-        
+
         return Ok(result);
     }
 
@@ -70,10 +70,10 @@ public class CardsController : ControllerBase
         await ValidateAccountOwnership(accountId);
 
         _logger.LogInformation("Getting cards for account {AccountId}", accountId);
-        
+
         var query = new GetCardsByAccountIdQuery { AccountId = accountId };
         var result = await _mediator.Send(query);
-        
+
         return Ok(result);
     }
 
@@ -160,7 +160,7 @@ public class CardsController : ControllerBase
 
     private Guid GetCurrentUserId()
     {
-        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value 
+        var userIdClaim = User.FindFirst(ClaimTypes.NameIdentifier)?.Value
                          ?? User.FindFirst("sub")?.Value;
         return Guid.Parse(userIdClaim!);
     }
@@ -176,7 +176,7 @@ public class CardsController : ControllerBase
 
         // Regular users can only operate on their own accounts
         var account = await _accountService.GetAccountByIdAsync(accountId);
-        
+
         if (account == null)
             throw new Application.Exceptions.NotFoundException(
                 string.Format(Application.Constants.ValidationMessages.AccountNotFound, accountId));

@@ -3,7 +3,7 @@ namespace BankingSystem.Application.Interfaces;
 public interface IBackgroundJobScheduler
 {
     string EnqueueJob<T>(System.Linq.Expressions.Expression<System.Action<T>> methodCall);
-    
+
     string ScheduleJob<T>(
         System.Linq.Expressions.Expression<System.Action<T>> methodCall,
         TimeSpan delay);
@@ -14,6 +14,6 @@ public interface IBackgroundJobScheduler
         string cronExpression);
 
     void DeleteJob(string jobId);
-    
+
     void DeleteRecurringJob(string recurringJobId);
 }

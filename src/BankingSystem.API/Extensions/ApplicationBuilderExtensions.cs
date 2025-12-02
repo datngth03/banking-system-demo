@@ -10,14 +10,14 @@ public static class ApplicationBuilderExtensions
     {
         // Security Headers - Must be first to ensure all responses have headers
         app.UseSecurityHeaders();
-        
+
         // Global Exception Handler
         app.UseGlobalExceptionHandler();
-        
+
         app.UseHttpsRedirection();
         app.UseRouting();
         app.MapControllers();
-        
+
         return app;
     }
 }

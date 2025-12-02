@@ -19,7 +19,7 @@ public class User : IEntity
     public DateTime? UpdatedAt { get; set; }
     public bool IsActive { get; set; } = true;
     public DateTime? LastLoginAt { get; set; }
-    
+
     // Account lockout properties
     public int FailedLoginAttempts { get; set; } = 0;
     public DateTime? LockoutEnd { get; set; }
@@ -34,7 +34,7 @@ public class User : IEntity
     public ICollection<RefreshToken> RefreshTokens { get; set; } = new List<RefreshToken>();
 
     // Helper methods for account lockout management
-    
+
     /// <summary>
     /// Checks if the account is currently locked out
     /// </summary>

@@ -120,7 +120,7 @@ public class JwtService : IJwtService
     public async Task<bool> ValidateRefreshTokenAsync(string token)
     {
         var refreshToken = await GetRefreshTokenAsync(token);
-        
+
         if (refreshToken == null)
             return false;
 

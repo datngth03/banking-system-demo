@@ -11,7 +11,7 @@ public class RegisterCommand : IRequest<AuthResponseDto>
     public string Password { get; set; } = string.Empty;
     public string PhoneNumber { get; set; } = string.Empty;
     public DateTime DateOfBirth { get; set; }
-    
+
     // Address
     public string? Street { get; set; }
     public string? City { get; set; }

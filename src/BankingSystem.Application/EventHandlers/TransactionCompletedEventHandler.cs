@@ -37,7 +37,7 @@ public class TransactionCompletedEventHandler : INotificationHandler<Transaction
                 "TransactionCompleted",
                 cancellationToken);
 
-            _logger.LogInformation("Notification created for transaction {TransactionId}", 
+            _logger.LogInformation("Notification created for transaction {TransactionId}",
                 notification.AggregateId);
         }
         catch (Exception ex)

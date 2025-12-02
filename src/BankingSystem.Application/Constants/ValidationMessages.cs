@@ -12,11 +12,11 @@ public static class ValidationMessages
     public const string MinimumLength = "{PropertyName} must be at least {MinLength} characters";
     public const string InvalidPhoneNumber = "{PropertyName} must be a valid phone number";
     public const string InvalidAmount = "Amount must be greater than 0";
-    
+
     // Entity Type Validation
     public const string InvalidAccountType = "Invalid account type";
     public const string InvalidTransactionType = "Invalid transaction type";
-    
+
     // Not Found Messages
     public const string AccountNotFound = "Account with id '{0}' was not found";
     public const string UserNotFound = "User with id '{0}' was not found";
@@ -24,7 +24,7 @@ public static class ValidationMessages
     public const string CardNotFound = "Card with id '{0}' was not found";
     public const string NotificationNotFound = "Notification with id '{0}' was not found";
     public const string TransactionNotFound = "Transaction with id '{0}' was not found";
-    
+
     // Business Logic Validation
     public const string InsufficientFunds = "Insufficient funds for this transaction";
     public const string InsufficientFundsDetail = "Insufficient funds. Available: {0}, Required: {1}";
@@ -33,7 +33,7 @@ public static class ValidationMessages
     public const string BillAlreadyPaid = "Bill is already paid";
     public const string AccountNotActive = "Account is not active";
     public const string CardBlocked = "Card is blocked";
-    
+
     // Authentication & Authorization
     public const string InvalidCredentials = "Invalid email or password";
     public const string UserAccountNotActive = "User account is not active";

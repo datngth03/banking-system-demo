@@ -6,7 +6,7 @@ public class InsufficientFundsException : DomainException
     {
     }
 
-    public InsufficientFundsException(string message, Exception innerException) 
+    public InsufficientFundsException(string message, Exception innerException)
         : base(message, innerException)
     {
     }

@@ -89,7 +89,7 @@ public class BankingSystemMetrics
     // Error tracking metrics
     public void RecordError(string errorType, ErrorSeverity severity)
     {
-        _errorCounter.Add(1, 
+        _errorCounter.Add(1,
             new KeyValuePair<string, object?>("error_type", errorType),
             new KeyValuePair<string, object?>("severity", severity.ToString()));
     }

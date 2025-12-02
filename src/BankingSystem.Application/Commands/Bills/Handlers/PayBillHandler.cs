@@ -32,13 +32,13 @@ public class PayBillHandler : IRequestHandler<PayBillCommand, Unit>
         var bill = await _context.Bills
             .Include(b => b.Account)
             .FirstOrDefaultAsync(b => b.Id == request.BillId, cancellationToken);
-            
+
         if (bill == null)
             throw new NotFoundException(string.Format(ValidationMessages.BillNotFound, request.BillId));
 
         var account = await _context.Accounts
             .FirstOrDefaultAsync(a => a.Id == request.AccountId, cancellationToken);
-            
+
         if (account == null)
             throw new NotFoundException(string.Format(ValidationMessages.AccountNotFound, request.AccountId));
 
@@ -50,7 +50,7 @@ public class PayBillHandler : IRequestHandler<PayBillCommand, Unit>
                 _currentUserService.UserId,
                 account.Id,
                 account.UserId);
-                
+
             throw new ForbiddenException("You can only pay bills from your own accounts");
         }
 
@@ -62,7 +62,7 @@ public class PayBillHandler : IRequestHandler<PayBillCommand, Unit>
                 bill.Id,
                 bill.AccountId,
                 request.AccountId);
-                
+
             throw new BankingApplicationException("Cannot pay a bill that doesn't belong to this account");
         }
 

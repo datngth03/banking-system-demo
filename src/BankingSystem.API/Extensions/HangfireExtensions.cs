@@ -71,7 +71,7 @@ public class HangfireDashboardAuthorizationFilter : IDashboardAuthorizationFilte
     public bool Authorize(DashboardContext context)
     {
         var httpContext = context.GetHttpContext();
-        
+
         // Check if user is authenticated
         if (!httpContext.User.Identity?.IsAuthenticated ?? true)
         {
@@ -80,13 +80,13 @@ public class HangfireDashboardAuthorizationFilter : IDashboardAuthorizationFilte
 
         // Check if user has Admin role
         var isAdmin = httpContext.User.IsInRole(Roles.Admin);
-        
+
         // In development, you might want to allow Manager role as well
-        #if DEBUG
+#if DEBUG
         var isManager = httpContext.User.IsInRole(Roles.Manager);
         return isAdmin || isManager;
-        #else
+#else
         return isAdmin;
-        #endif
+#endif
     }
 }

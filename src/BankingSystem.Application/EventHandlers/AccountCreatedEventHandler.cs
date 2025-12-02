@@ -20,8 +20,8 @@ public class AccountCreatedEventHandler : INotificationHandler<AccountCreatedEve
 
     public async Task Handle(AccountCreatedEvent notification, CancellationToken cancellationToken)
     {
-        _logger.LogInformation("Handling {EventName} for account {AccountId}", 
-            nameof(AccountCreatedEvent), 
+        _logger.LogInformation("Handling {EventName} for account {AccountId}",
+            nameof(AccountCreatedEvent),
             notification.AggregateId);
 
         try

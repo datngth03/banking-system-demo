@@ -19,7 +19,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(u => u.CreatedAt).IsRequired();
         builder.Property(u => u.UpdatedAt);
         builder.Property(u => u.LastLoginAt);
-        
+
         // Account lockout properties
         builder.Property(u => u.FailedLoginAttempts).HasDefaultValue(0);
         builder.Property(u => u.LockoutEnd);
@@ -57,7 +57,7 @@ public class UserConfiguration : IEntityTypeConfiguration<User>
             .OnDelete(DeleteBehavior.Cascade);
 
         // ============ INDEXES FOR PERFORMANCE ============
-        
+
         // Unique index for email (login queries)
         builder.HasIndex(u => u.Email)
             .IsUnique()

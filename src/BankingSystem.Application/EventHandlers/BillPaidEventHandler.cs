@@ -36,7 +36,7 @@ public class BillPaidEventHandler : INotificationHandler<BillPaidEvent>
                 "BillPaid",
                 cancellationToken);
 
-            _logger.LogInformation("Notification sent for bill {BillId}", 
+            _logger.LogInformation("Notification sent for bill {BillId}",
                 notification.AggregateId);
         }
         catch (Exception ex)

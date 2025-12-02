@@ -49,7 +49,7 @@ public class GlobalExceptionHandlerMiddleware
             ["TraceId"] = context.TraceIdentifier
         };
 
-        var userId = context.User?.FindFirst("sub")?.Value 
+        var userId = context.User?.FindFirst("sub")?.Value
             ?? context.User?.FindFirst("http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier")?.Value;
 
         await errorTracker.TrackErrorAsync(exception, errorContext, userId);
@@ -107,7 +107,7 @@ public class GlobalExceptionHandlerMiddleware
                     appEx
                 )
             ),
-            
+
             // Domain Layer Exceptions
             InsufficientFundsException insufficientFundsEx => (
                 HttpStatusCode.BadRequest,
@@ -149,7 +149,7 @@ public class GlobalExceptionHandlerMiddleware
                     domainEx
                 )
             ),
-            
+
             // System Exceptions (fallback only)
             UnauthorizedAccessException unauthorizedAccessEx => (
                 HttpStatusCode.Unauthorized,
@@ -181,7 +181,7 @@ public class GlobalExceptionHandlerMiddleware
                     invalidOpEx
                 )
             ),
-            
+
             // Default handler for unexpected exceptions
             _ => (
                 HttpStatusCode.InternalServerError,

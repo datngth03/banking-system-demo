@@ -44,7 +44,7 @@ public static class InfrastructureServiceExtensions
                     errorCodesToAdd: null);
                 npgsqlOptions.CommandTimeout(30);
             });
-            
+
             // Enable query tracking optimization
             options.UseQueryTrackingBehavior(QueryTrackingBehavior.NoTrackingWithIdentityResolution);
         });
@@ -67,12 +67,12 @@ public static class InfrastructureServiceExtensions
         services.AddScoped<IInterestCalculationService, InterestCalculationService>();
         services.AddScoped<IAuditLogService, AuditLogService>();
         services.AddScoped<IEventPublisher, EventPublisher>();
-        
+
         // Monitoring & Metrics
         services.AddSingleton<IMetricsService, MetricsService>();
         services.AddSingleton<BankingSystemMetrics>();
         services.AddHostedService<MetricsCollectorService>();
-        
+
         // Error Tracking
         services.AddScoped<IErrorTrackingService, ErrorTrackingService>();
 
@@ -85,7 +85,7 @@ public static class InfrastructureServiceExtensions
             options.Configuration = configuration.GetConnectionString("Redis")
                 ?? "localhost:6379";
         });
-        
+
         // Cache Service (wrapper around IDistributedCache)
         services.AddScoped<ICacheService, CacheService>();
 

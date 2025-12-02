@@ -6,7 +6,7 @@ public class UnauthorizedException : BankingApplicationException
     {
     }
 
-    public UnauthorizedException(string message, Exception innerException) 
+    public UnauthorizedException(string message, Exception innerException)
         : base(message, innerException)
     {
     }

@@ -47,7 +47,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> CreateUser([FromBody] CreateUserCommand command)
     {
         _logger.LogInformation("Creating user with email {Email}", command.Email);
-        
+
         var result = await _mediator.Send(command);
         return CreatedAtAction(nameof(GetUserById), new { id = result.Id }, result);
     }
@@ -102,7 +102,7 @@ public class UsersController : ControllerBase
             return BadRequest(new { error = "ID mismatch" });
 
         _logger.LogInformation("Updating user {UserId}", id);
-        
+
         var result = await _mediator.Send(command);
         return Ok(result);
     }
@@ -125,7 +125,7 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> DeleteUser(Guid id)
     {
         _logger.LogInformation("Deleting user {UserId}", id);
-        
+
         var command = new DeleteUserCommand { Id = id };
         await _mediator.Send(command);
         return Ok(new { message = "User deleted successfully" });
@@ -149,9 +149,9 @@ public class UsersController : ControllerBase
     public async Task<IActionResult> UnlockAccount(Guid id)
     {
         var adminUserId = Guid.Parse(User.FindFirst(ClaimTypes.NameIdentifier)?.Value ?? Guid.Empty.ToString());
-        
+
         _logger.LogInformation("Admin {AdminUserId} attempting to unlock user {UserId}", adminUserId, id);
-        
+
         var command = new UnlockAccountCommand
         {
             UserId = id,
@@ -159,7 +159,7 @@ public class UsersController : ControllerBase
         };
 
         await _mediator.Send(command);
-        
+
         return Ok(new { message = "Account unlocked successfully" });
     }
 }

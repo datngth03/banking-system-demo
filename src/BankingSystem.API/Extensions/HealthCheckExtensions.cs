@@ -46,7 +46,7 @@ public static class HealthCheckExtensions
             }, tags: new[] { "memory", "resource", "ready", "live" })
 
             // Application health check
-            .AddCheck("self", () => HealthCheckResult.Healthy("API is running"), 
+            .AddCheck("self", () => HealthCheckResult.Healthy("API is running"),
                 tags: new[] { "self", "ready", "live" });
 
         return services;

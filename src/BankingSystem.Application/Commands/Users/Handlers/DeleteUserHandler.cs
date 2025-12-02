@@ -19,7 +19,7 @@ public class DeleteUserHandler : IRequestHandler<DeleteUserCommand, Unit>
     public async Task<Unit> Handle(DeleteUserCommand request, CancellationToken cancellationToken)
     {
         var user = await _context.Users.FirstOrDefaultAsync(u => u.Id == request.Id, cancellationToken);
-        
+
         if (user == null)
             throw new NotFoundException(string.Format(ValidationMessages.UserNotFound, request.Id));
 
