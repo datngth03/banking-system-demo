@@ -1,0 +1,391 @@
+<?xml version="1.0"?>
+<doc>
+    <assembly>
+        <name>BankingSystem.API</name>
+    </assembly>
+    <members>
+        <member name="T:BankingSystem.API.Controllers.AccountsController">
+            <summary>
+            Manages bank account operations including creation, deposits, withdrawals, and transfers
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.AccountsController.CreateAccount(BankingSystem.Application.Commands.Accounts.CreateAccountCommand)">
+            <summary>
+            Creates a new bank account
+            </summary>
+            <param name="command">Account creation details</param>
+            <returns>The ID of the newly created account</returns>
+            <response code="201">Account created successfully</response>
+            <response code="400">Invalid request data</response>
+            <response code="401">Unauthorized - Invalid or missing token</response>
+            <response code="403">Forbidden - Users can only create accounts for themselves</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.AccountsController.GetMyAccounts">
+            <summary>
+            Gets all accounts for the currently authenticated user
+            </summary>
+            <returns>List of user's accounts</returns>
+            <response code="200">Returns the list of accounts</response>
+            <response code="401">Unauthorized - Invalid or missing token</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.AccountsController.GetUserAccounts(System.Guid)">
+            <summary>
+            Gets all accounts for a specific user (Staff only)
+            </summary>
+            <param name="userId">The user's ID</param>
+            <returns>List of user's accounts</returns>
+            <response code="200">Returns the list of accounts</response>
+            <response code="401">Unauthorized</response>
+            <response code="403">Forbidden - Requires staff role</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.AccountsController.GetAccountDetails(System.Guid)">
+            <summary>
+            Gets detailed information about a specific account
+            </summary>
+            <param name="id">The account ID</param>
+            <returns>Account details</returns>
+            <response code="200">Returns the account details</response>
+            <response code="404">Account not found</response>
+            <response code="403">Forbidden - Users can only view their own accounts</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.AccountsController.Deposit(System.Guid,BankingSystem.Application.DTOs.Accounts.DepositRequest)">
+            <summary>
+            Deposits money into an account
+            </summary>
+            <param name="id">The account ID</param>
+            <param name="request">Deposit details</param>
+            <returns>Success message</returns>
+            <response code="200">Deposit completed successfully</response>
+            <response code="400">Invalid amount or account state</response>
+            <response code="403">Forbidden - Users can only deposit to their own accounts</response>
+            <response code="404">Account not found</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.AccountsController.Withdraw(System.Guid,BankingSystem.Application.DTOs.Accounts.WithdrawRequest)">
+            <summary>
+            Withdraws money from an account
+            </summary>
+            <param name="id">The account ID</param>
+            <param name="request">Withdrawal details</param>
+            <returns>Success message</returns>
+            <response code="200">Withdrawal completed successfully</response>
+            <response code="400">Insufficient funds or invalid amount</response>
+            <response code="403">Forbidden - Users can only withdraw from their own accounts</response>
+            <response code="404">Account not found</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.AccountsController.TransferFunds(BankingSystem.Application.Commands.Accounts.TransferFundsCommand)">
+            <summary>
+            Transfers funds between accounts
+            </summary>
+            <param name="command">Transfer details</param>
+            <returns>Success message</returns>
+            <response code="200">Transfer completed successfully</response>
+            <response code="400">Insufficient funds, invalid accounts, or same account transfer</response>
+            <response code="403">Forbidden - Users can only transfer from their own accounts</response>
+            <response code="404">Source or destination account not found</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.AccountsController.CloseAccount(System.Guid)">
+            <summary>
+            Closes an account (Staff only)
+            </summary>
+            <param name="id">The account ID to close</param>
+            <returns>Success message</returns>
+            <response code="200">Account closed successfully</response>
+            <response code="400">Cannot close account with remaining balance</response>
+            <response code="403">Forbidden - Requires staff role</response>
+            <response code="404">Account not found</response>
+        </member>
+        <member name="T:BankingSystem.API.Controllers.BillsController">
+            <summary>
+            Manages bill payment operations
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.BillsController.GetPendingBills(System.Guid)">
+            <summary>
+            Gets all pending bills for an account
+            </summary>
+            <param name="accountId">Account ID to get pending bills for</param>
+            <returns>List of pending bills</returns>
+            <response code="200">Returns list of pending bills</response>
+            <response code="401">Unauthorized</response>
+            <response code="403">Forbidden - Can only view bills for own accounts</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.BillsController.PayBill(System.Guid,BankingSystem.Application.Commands.Bills.PayBillCommand)">
+            <summary>
+            Pays a bill from an account
+            </summary>
+            <param name="id">Bill ID to pay</param>
+            <param name="command">Payment details</param>
+            <returns>Success message</returns>
+            <response code="200">Bill paid successfully</response>
+            <response code="400">Invalid request data, ID mismatch, or insufficient funds</response>
+            <response code="404">Bill or account not found</response>
+            <response code="401">Unauthorized</response>
+            <response code="403">Forbidden - Can only pay bills from own accounts</response>
+        </member>
+        <member name="T:BankingSystem.API.Controllers.CardsController">
+            <summary>
+            Manages card operations including issuance, activation, and blocking
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.CardsController.GetMyCards">
+            <summary>
+            Gets all cards for the currently authenticated user
+            </summary>
+            <returns>List of user's cards with masked card numbers</returns>
+            <response code="200">Returns the list of cards</response>
+            <response code="401">Unauthorized - Invalid or missing token</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.CardsController.GetCardsByAccount(System.Guid)">
+            <summary>
+            Gets all cards for a specific account
+            </summary>
+            <param name="accountId">The account ID</param>
+            <returns>List of cards associated with the account</returns>
+            <response code="200">Returns the list of cards</response>
+            <response code="403">Forbidden - Users can only view cards for their own accounts</response>
+            <response code="404">Account not found</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.CardsController.IssueCard(BankingSystem.Application.Commands.Cards.IssueCardCommand)">
+            <summary>
+            Issues a new card for an account
+            </summary>
+            <param name="command">Card issuance details</param>
+            <returns>The ID of the newly issued card</returns>
+            <response code="201">Card issued successfully</response>
+            <response code="400">Invalid card type or account state</response>
+            <response code="403">Forbidden - Users can only issue cards for their own accounts</response>
+            <response code="404">Account not found</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.CardsController.ActivateCard(System.Guid,BankingSystem.Application.DTOs.Cards.ActivateCardRequest)">
+            <summary>
+            Activates a card
+            </summary>
+            <param name="id">The card ID</param>
+            <param name="request">Activation details including last four digits for verification</param>
+            <returns>Success message</returns>
+            <response code="200">Card activated successfully</response>
+            <response code="400">Invalid last four digits or card already activated</response>
+            <response code="404">Card not found</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.CardsController.BlockCard(System.Guid,BankingSystem.Application.DTOs.Cards.BlockCardRequest)">
+            <summary>
+            Blocks a card
+            </summary>
+            <param name="id">The card ID</param>
+            <param name="request">Block details including optional reason</param>
+            <returns>Success message</returns>
+            <response code="200">Card blocked successfully</response>
+            <response code="400">Card already blocked or invalid state</response>
+            <response code="404">Card not found</response>
+        </member>
+        <member name="T:BankingSystem.API.Controllers.MonitoringController">
+            <summary>
+            Monitoring and diagnostics endpoints (Admin only)
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.MonitoringController.GetErrorStatisticsLastHour">
+            <summary>
+            Get error statistics for the last hour
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.MonitoringController.GetErrorStatisticsLast24Hours">
+            <summary>
+            Get error statistics for the last 24 hours
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.MonitoringController.GetErrorStatisticsCustom(System.Int32)">
+            <summary>
+            Get error statistics for custom time range
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.MonitoringController.MonitoringHealth">
+            <summary>
+            Health check for monitoring system
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Controllers.TransactionsController">
+            <summary>
+            Manages transaction queries and history
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.TransactionsController.GetUserTransactions(System.Guid)">
+            <summary>
+            Gets all transactions for a specific user
+            </summary>
+            <param name="userId">User ID</param>
+            <returns>List of transactions</returns>
+            <response code="200">Returns transaction list</response>
+            <response code="401">Unauthorized</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.TransactionsController.GetUserTransactionsPaged(System.Guid,System.Int32,System.Int32,System.Nullable{System.Guid},System.String,System.Nullable{System.DateTime},System.Nullable{System.DateTime},System.Nullable{System.Decimal},System.Nullable{System.Decimal},System.String,System.String,System.Boolean)">
+            <summary>
+            Gets paginated and filtered transactions for a specific user
+            </summary>
+            <param name="userId">User ID</param>
+            <param name="pageNumber">Page number (default: 1)</param>
+            <param name="pageSize">Items per page (default: 10, max: 100)</param>
+            <param name="accountId">Filter by account ID (optional)</param>
+            <param name="transactionType">Filter by transaction type (Deposit, Withdrawal, Transfer)</param>
+            <param name="fromDate">Start date for filtering (optional)</param>
+            <param name="toDate">End date for filtering (optional)</param>
+            <param name="minAmount">Minimum transaction amount (optional)</param>
+            <param name="maxAmount">Maximum transaction amount (optional)</param>
+            <param name="searchTerm">Search in description (optional)</param>
+            <param name="sortBy">Sort field (default: TransactionDate)</param>
+            <param name="sortDescending">Sort direction (default: true)</param>
+            <returns>Paginated transaction list</returns>
+            <response code="200">Returns paginated transactions</response>
+            <response code="400">Invalid query parameters</response>
+            <response code="401">Unauthorized</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.TransactionsController.GetTransactionReceipt(System.Guid)">
+            <summary>
+            Gets transaction receipt details
+            </summary>
+            <param name="id">Transaction ID</param>
+            <returns>Transaction receipt</returns>
+            <response code="200">Returns transaction receipt</response>
+            <response code="404">Transaction not found</response>
+            <response code="401">Unauthorized</response>
+        </member>
+        <member name="T:BankingSystem.API.Controllers.UsersController">
+            <summary>
+            Manages user administration operations (Admin/Manager only)
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.UsersController.CreateUser(BankingSystem.Application.Commands.Users.CreateUserCommand)">
+            <summary>
+            Creates a new user (Admin/Manager only)
+            </summary>
+            <param name="command">User creation details</param>
+            <returns>Created user details</returns>
+            <response code="201">User created successfully</response>
+            <response code="400">Invalid request data</response>
+            <response code="401">Unauthorized</response>
+            <response code="403">Forbidden - Requires Admin or Manager role</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.UsersController.GetUserById(System.Guid)">
+            <summary>
+            Gets user details by ID (Staff only)
+            </summary>
+            <param name="id">User ID</param>
+            <returns>User details</returns>
+            <response code="200">Returns user details</response>
+            <response code="404">User not found</response>
+            <response code="401">Unauthorized</response>
+            <response code="403">Forbidden - Requires Staff role</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.UsersController.UpdateUser(System.Guid,BankingSystem.Application.Commands.Users.UpdateUserCommand)">
+            <summary>
+            Updates user information (Admin/Manager only)
+            </summary>
+            <param name="id">User ID</param>
+            <param name="command">Updated user details</param>
+            <returns>Success message</returns>
+            <response code="200">User updated successfully</response>
+            <response code="400">Invalid request data or ID mismatch</response>
+            <response code="404">User not found</response>
+            <response code="401">Unauthorized</response>
+            <response code="403">Forbidden - Requires Admin or Manager role</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.UsersController.DeleteUser(System.Guid)">
+            <summary>
+            Deletes a user (Admin only)
+            </summary>
+            <param name="id">User ID to delete</param>
+            <returns>Success message</returns>
+            <response code="200">User deleted successfully</response>
+            <response code="404">User not found</response>
+            <response code="401">Unauthorized</response>
+            <response code="403">Forbidden - Requires Admin role</response>
+        </member>
+        <member name="M:BankingSystem.API.Controllers.UsersController.UnlockAccount(System.Guid)">
+            <summary>
+            Unlocks a locked user account (Admin/Manager only)
+            </summary>
+            <param name="id">User ID to unlock</param>
+            <returns>Success message</returns>
+            <response code="200">Account unlocked successfully</response>
+            <response code="404">User not found</response>
+            <response code="401">Unauthorized</response>
+            <response code="403">Forbidden - Requires Admin or Manager role</response>
+        </member>
+        <member name="T:BankingSystem.API.Extensions.HangfireExtensions">
+            <summary>
+            Extension methods for configuring Hangfire dashboard and recurring jobs
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Extensions.HangfireExtensions.UseHangfireConfiguration(Microsoft.AspNetCore.Builder.IApplicationBuilder)">
+            <summary>
+            Configure Hangfire dashboard and recurring jobs
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Extensions.HangfireDashboardAuthorizationFilter">
+            <summary>
+            Authorization filter for Hangfire Dashboard
+            Requires Admin role to access the dashboard
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Extensions.MonitoringExtensions">
+            <summary>
+            Extension methods for configuring monitoring, telemetry, and observability
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Extensions.MonitoringExtensions.AddBankingSystemTelemetry(Microsoft.Extensions.DependencyInjection.IServiceCollection,Microsoft.Extensions.Configuration.IConfiguration)">
+            <summary>
+            Adds OpenTelemetry with tracing and metrics
+            </summary>
+        </member>
+        <member name="M:BankingSystem.API.Extensions.MonitoringExtensions.UseBankingSystemLogging(Microsoft.Extensions.Hosting.IHostBuilder)">
+            <summary>
+            Configures enhanced Serilog with structured logging and sinks
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.CorrelationIdMiddleware">
+            <summary>
+            Middleware to add correlation ID to all requests for distributed tracing
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.CorrelationIdMiddlewareExtensions">
+            <summary>
+            Extension method to register CorrelationIdMiddleware
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.HealthCheckResponseWriter">
+            <summary>
+            Custom health check response writer with detailed status
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.InputSanitizationMiddleware">
+            <summary>
+            Middleware to sanitize input data to prevent XSS attacks
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.InputSanitizationMiddlewareExtensions">
+            <summary>
+            Extension method to register InputSanitizationMiddleware
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.RequestResponseLoggingMiddleware">
+            <summary>
+            Middleware to log all HTTP requests and responses with timing
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.RequestResponseLoggingMiddlewareExtensions">
+            <summary>
+            Extension method to register RequestResponseLoggingMiddleware
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.SecurityHeadersMiddleware">
+            <summary>
+            Middleware to add security headers to HTTP responses
+            Implements OWASP recommendations for secure headers
+            </summary>
+        </member>
+        <member name="T:BankingSystem.API.Middleware.SecurityHeadersMiddlewareExtensions">
+            <summary>
+            Extension method to register SecurityHeadersMiddleware
+            </summary>
+        </member>
+    </members>
+</doc>

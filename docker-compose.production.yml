@@ -1,0 +1,121 @@
+version: '3.8'
+
+services:
+  banking-api-production:
+    build:
+      context: .
+      dockerfile: src/BankingSystem.API/Dockerfile
+      args:
+        BUILD_VERSION: ${BUILD_VERSION:-1.0.0}
+        BUILD_DATE: ${BUILD_DATE}
+    image: banking-api:production
+    container_name: banking-api-production
+    restart: always
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Production
+      - ASPNETCORE_URLS=https://+:443;http://+:80
+      - ConnectionStrings__DefaultConnection=${DB_CONNECTION_PRODUCTION}
+      - ConnectionStrings__HangfireConnection=${HANGFIRE_CONNECTION_PRODUCTION}
+      - ConnectionStrings__Redis=${REDIS_CONNECTION_PRODUCTION}
+      - JwtSettings__Secret=${JWT_SECRET_PRODUCTION}
+      - Logging__Seq__Url=${SEQ_URL_PRODUCTION}
+      - Logging__Seq__ApiKey=${SEQ_API_KEY_PRODUCTION}
+      - ApplicationInsights__ConnectionString=${APP_INSIGHTS_CONNECTION_STRING}
+      - Encryption__Key=${ENCRYPTION_KEY_PRODUCTION}
+      - Encryption__IV=${ENCRYPTION_IV_PRODUCTION}
+      - EmailSettings__Username=${EMAIL_USERNAME}
+      - EmailSettings__Password=${EMAIL_PASSWORD}
+    ports:
+      - "443:443"
+      - "80:80"
+    volumes:
+      - ./certs:/app/certs:ro  # SSL certificates
+      - app-logs:/app/logs
+    networks:
+      - banking-network-production
+    deploy:
+      replicas: 2
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      restart_policy:
+        condition: on-failure
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+    healthcheck:
+      test: ["CMD", "curl", "-f", "https://localhost/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  postgres-production:
+    image: postgres:16-alpine
+    container_name: banking-postgres-production
+    restart: always
+    environment:
+      - POSTGRES_DB=BankingSystemProd
+      - POSTGRES_USER=${POSTGRES_USER_PRODUCTION}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD_PRODUCTION}
+      - PGDATA=/var/lib/postgresql/data/pgdata
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres-data-production:/var/lib/postgresql/data
+      - ./backups:/backups
+    networks:
+      - banking-network-production
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER_PRODUCTION}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  redis-production:
+    image: redis:7-alpine
+    container_name: banking-redis-production
+    restart: always
+    command: redis-server --requirepass ${REDIS_PASSWORD_PRODUCTION} --maxmemory 512mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis-data-production:/data
+    networks:
+      - banking-network-production
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    healthcheck:
+      test: ["CMD", "redis-cli", "--no-auth-warning", "-a", "${REDIS_PASSWORD_PRODUCTION}", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+
+volumes:
+  postgres-data-production:
+    driver: local
+  redis-data-production:
+    driver: local
+  app-logs:
+    driver: local
+
+networks:
+  banking-network-production:
+    driver: bridge

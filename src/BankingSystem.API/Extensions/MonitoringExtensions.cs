@@ -6,6 +6,7 @@ using OpenTelemetry.Trace;
 using OpenTelemetry.Instrumentation.Runtime;
 using Serilog;
 using Serilog.Events;
+using Serilog.Sinks.ApplicationInsights.TelemetryConverters;
 
 /// <summary>
 /// Extension methods for configuring monitoring, telemetry, and observability
@@ -70,8 +71,10 @@ public static class MonitoringExtensions
     {
         return hostBuilder.UseSerilog((context, services, configuration) =>
         {
+            var environment = context.HostingEnvironment.EnvironmentName;
             var seqUrl = context.Configuration["Logging:Seq:Url"];
             var seqApiKey = context.Configuration["Logging:Seq:ApiKey"];
+            var appInsightsConnectionString = context.Configuration["ApplicationInsights:ConnectionString"];
 
             configuration
                 .ReadFrom.Configuration(context.Configuration)
@@ -81,28 +84,89 @@ public static class MonitoringExtensions
                 .Enrich.WithEnvironmentName()
                 .Enrich.WithThreadId()
                 .Enrich.WithProperty("Application", "BankingSystem.API")
-                .WriteTo.Console(
-                    outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}",
-                    restrictedToMinimumLevel: LogEventLevel.Information)
-                .WriteTo.File(
-                    path: "logs/banking-system-.log",
-                    rollingInterval: RollingInterval.Day,
-                    retainedFileCountLimit: 30,
-                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] {SourceContext} {Message:lj}{NewLine}{Exception}",
-                    restrictedToMinimumLevel: LogEventLevel.Warning);
+                .Enrich.WithProperty("Version", context.Configuration["ServiceVersion"] ?? "1.0.0")
+                .Enrich.WithProperty("EnvironmentType", environment);
 
-            // Add Seq sink if configured
+            // Console logging - all environments
+            configuration.WriteTo.Console(
+                outputTemplate: "[{Timestamp:HH:mm:ss} {Level:u3}] [{EnvironmentType}] {SourceContext}{NewLine}{Message:lj}{NewLine}{Exception}",
+                restrictedToMinimumLevel: environment == "Production" ? LogEventLevel.Warning : LogEventLevel.Information);
+
+            // File logging - not in Test environment
+            if (environment != "Test")
+            {
+                var logPath = environment == "Production" 
+                    ? "/app/logs/banking-system-.log"  // Container path for production
+                    : "logs/banking-system-.log";      // Local path for dev/staging
+
+                configuration.WriteTo.File(
+                    path: logPath,
+                    rollingInterval: RollingInterval.Day,
+                    retainedFileCountLimit: environment == "Production" ? 90 : 30,
+                    fileSizeLimitBytes: 100_000_000, // 100 MB
+                    rollOnFileSizeLimit: true,
+                    outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm:ss.fff zzz} [{Level:u3}] [{EnvironmentType}] {SourceContext} {Message:lj}{NewLine}{Exception}",
+                    restrictedToMinimumLevel: LogEventLevel.Warning);
+            }
+
+            // Seq logging - only if configured
             if (!string.IsNullOrEmpty(seqUrl))
             {
-                if (!string.IsNullOrEmpty(seqApiKey))
+                try
                 {
-                    configuration.WriteTo.Seq(seqUrl, apiKey: seqApiKey);
+                    var seqMinLevel = environment == "Production" 
+                        ? LogEventLevel.Warning 
+                        : LogEventLevel.Information;
+
+                    if (!string.IsNullOrEmpty(seqApiKey))
+                    {
+                        configuration.WriteTo.Seq(
+                            seqUrl, 
+                            apiKey: seqApiKey,
+                            restrictedToMinimumLevel: seqMinLevel,
+                            period: TimeSpan.FromSeconds(2),  // Batch every 2 seconds
+                            batchPostingLimit: 100);          // Max 100 events per batch
+                    }
+                    else
+                    {
+                        configuration.WriteTo.Seq(
+                            seqUrl,
+                            restrictedToMinimumLevel: seqMinLevel,
+                            period: TimeSpan.FromSeconds(2),
+                            batchPostingLimit: 100);
+                    }
                 }
-                else
+                catch (Exception ex)
                 {
-                    configuration.WriteTo.Seq(seqUrl);
+                    // Log configuration error to console but don't crash
+                    Console.WriteLine($"Warning: Failed to configure Seq sink: {ex.Message}");
                 }
             }
+
+            // Application Insights for Azure (Production/Staging)
+            if (!string.IsNullOrEmpty(appInsightsConnectionString) && 
+                (environment == "Production" || environment == "Staging"))
+            {
+                try
+                {
+                    configuration.WriteTo.ApplicationInsights(
+                        appInsightsConnectionString,
+                        TelemetryConverter.Traces,
+                        restrictedToMinimumLevel: LogEventLevel.Warning);
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Warning: Failed to configure Application Insights sink: {ex.Message}");
+                }
+            }
+
+            // Override minimum level for specific namespaces to reduce noise
+            configuration
+                .MinimumLevel.Override("Microsoft", LogEventLevel.Warning)
+                .MinimumLevel.Override("Microsoft.EntityFrameworkCore.Database.Command", 
+                    environment == "Development" ? LogEventLevel.Information : LogEventLevel.Warning)
+                .MinimumLevel.Override("System", LogEventLevel.Warning)
+                .MinimumLevel.Override("System.Net.Http.HttpClient", LogEventLevel.Warning);
         });
     }
 }

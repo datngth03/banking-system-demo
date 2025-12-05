@@ -174,28 +174,54 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
-    - name: Deploy to Staging (Placeholder)
+    - name: Deploy to Staging
+      env:
+        ASPNETCORE_ENVIRONMENT: Staging
+        ConnectionStrings__DefaultConnection: ${{ secrets.DB_CONNECTION_STAGING }}
+        ConnectionStrings__HangfireConnection: ${{ secrets.HANGFIRE_CONNECTION_STAGING }}
+        ConnectionStrings__Redis: ${{ secrets.REDIS_CONNECTION_STAGING }}
+        JwtSettings__Secret: ${{ secrets.JWT_SECRET_STAGING }}
+        Logging__Seq__ApiKey: ${{ secrets.SEQ_API_KEY_STAGING }}
+        Encryption__Key: ${{ secrets.ENCRYPTION_KEY_STAGING }}
+        Encryption__IV: ${{ secrets.ENCRYPTION_IV_STAGING }}
+        ApplicationInsights__ConnectionString: ${{ secrets.APP_INSIGHTS_CONNECTION_STRING_STAGING }}
+        EmailSettings__Username: ${{ secrets.EMAIL_USERNAME }}
+        EmailSettings__Password: ${{ secrets.EMAIL_PASSWORD }}
       run: |
         echo "Deploying to staging environment..."
+        echo "Environment: $ASPNETCORE_ENVIRONMENT"
         echo "Version: ${{ needs.build-docker-image.outputs.version }}"
         echo "Image: ${{ needs.build-docker-image.outputs.image-tag }}"
         echo "Digest: ${{ needs.build-docker-image.outputs.image-digest }}"
-        # Add your deployment commands here
-        # Examples:
-        # - kubectl apply -f k8s/staging/
-        # - helm upgrade --install banking-api ./charts/banking-api
-        # - az containerapp update ...
+        
+        # Example deployment commands:
+        # kubectl set env deployment/banking-api \
+        #   ASPNETCORE_ENVIRONMENT=Staging \
+        #   --from=secret/banking-secrets-staging
+        
+        # Or Azure Container Apps:
+        # az containerapp update \
+        #   --name banking-api-staging \
+        #   --resource-group rg-banking-staging \
+        #   --image ${{ needs.build-docker-image.outputs.image-tag }} \
+        #   --set-env-vars \
+        #     ASPNETCORE_ENVIRONMENT=Staging \
+        #     ConnectionStrings__DefaultConnection=secretref:db-connection \
+        #     ApplicationInsights__ConnectionString=secretref:app-insights
 
     - name: Run smoke tests
       run: |
         echo "Running smoke tests against staging..."
-        # Add smoke test commands here
+        # Example smoke tests:
+        # curl -f https://banking-api-staging.example.com/health || exit 1
+        # curl -f https://banking-api-staging.example.com/health/ready || exit 1
 
     - name: Notify deployment
       if: always()
       run: |
         echo "Deployment to staging completed"
         echo "Status: ${{ job.status }}"
+        # Add Slack/Teams notification here if needed
 
   deploy-production:
     name: Deploy to Production

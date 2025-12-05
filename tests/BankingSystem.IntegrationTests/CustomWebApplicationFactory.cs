@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.TestHost;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using BankingSystem.Infrastructure.Persistence;
+using Microsoft.Extensions.Diagnostics.HealthChecks;
 
 namespace BankingSystem.IntegrationTests;
 
@@ -27,6 +28,19 @@ public class CustomWebApplicationFactory<TStartup> : WebApplicationFactory<TStar
             {
                 options.UseInMemoryDatabase("TestDatabase");
             });
+
+            // Remove health checks that depend on external services
+            var healthCheckDescriptors = services.Where(d => 
+                d.ServiceType == typeof(HealthCheckService) || 
+                d.ImplementationType?.Namespace?.Contains("HealthChecks") == true).ToList();
+            
+            foreach (var healthCheckDescriptor in healthCheckDescriptors)
+            {
+                services.Remove(healthCheckDescriptor);
+            }
+
+            // Add simple health check for tests
+            services.AddHealthChecks();
 
             // Build service provider
             var sp = services.BuildServiceProvider();

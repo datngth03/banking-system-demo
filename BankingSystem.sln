@@ -22,13 +22,82 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{4D14F801-508A-460E-BC0B-25759B0BD672}"
 	ProjectSection(SolutionItems) = preProject
 		.dockerignore = .dockerignore
+		.env = .env
 		.env.example = .env.example
 		.gitignore = .gitignore
-		devops.md = devops.md
+		apply-migrations.ps1 = apply-migrations.ps1
+		docker-compose.ci.yml = docker-compose.ci.yml
+		docker-compose.production.yml = docker-compose.production.yml
 		docker-compose.yml = docker-compose.yml
+		fix-seq.ps1 = fix-seq.ps1
+		generate-secrets.ps1 = generate-secrets.ps1
 		load-test.js = load-test.js
+		local-ci.ps1 = local-ci.ps1
+		local-ci.sh = local-ci.sh
 		README.md = README.md
 		ROADMAP.md = ROADMAP.md
+		setup-monitoring.ps1 = setup-monitoring.ps1
+		start-dev.ps1 = start-dev.ps1
+		stop-dev.ps1 = stop-dev.ps1
+		test-seq-logs.ps1 = test-seq-logs.ps1
+		testlog.ps1 = testlog.ps1
+		verify-config.ps1 = verify-config.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{AF877FE9-4D5E-4043-8FF7-43A7322CB8FA}"
+	ProjectSection(SolutionItems) = preProject
+		docs\DEPLOYMENT-GUIDE.md = docs\DEPLOYMENT-GUIDE.md
+		docs\DOCKER-PROFILES.md = docs\DOCKER-PROFILES.md
+		docs\FINAL-SUMMARY.md = docs\FINAL-SUMMARY.md
+		docs\GITHUB-PUSH-GUIDE.md = docs\GITHUB-PUSH-GUIDE.md
+		docs\MONITORING-GUIDE.md = docs\MONITORING-GUIDE.md
+		docs\MONITORING.md = docs\MONITORING.md
+		docs\PROJECT-CHECKLIST.md = docs\PROJECT-CHECKLIST.md
+		docs\WORKFLOW-ARCHITECTURE.md = docs\WORKFLOW-ARCHITECTURE.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "k8s", "k8s", "{CCE72C61-5404-4CD4-A9E4-D37F1598475A}"
+	ProjectSection(SolutionItems) = preProject
+		k8s\deployment.yml = k8s\deployment.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "monitoring", "monitoring", "{A6613316-EDA0-4AE8-B372-F5023442BF46}"
+	ProjectSection(SolutionItems) = preProject
+		monitoring\alertmanager.yml = monitoring\alertmanager.yml
+		monitoring\prometheus.yml = monitoring\prometheus.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "alerts", "alerts", "{893A938A-5305-4394-83E0-7C1281D425E3}"
+	ProjectSection(SolutionItems) = preProject
+		monitoring\alerts\banking-system-rules.yml = monitoring\alerts\banking-system-rules.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "grafana", "grafana", "{103E7C15-EF9D-4D5E-A2C8-CA27C3C8C382}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dashboards", "dashboards", "{6A91ACDD-0BD3-426E-AB6D-0B447D75F1CF}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "provisioning", "provisioning", "{6DCFAFAD-85CB-49EF-9035-A3569ABDB8D6}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dashboards", "dashboards", "{67095505-CE81-4027-BB80-7C6B7BDDF0AF}"
+	ProjectSection(SolutionItems) = preProject
+		monitoring\grafana\provisioning\dashboards\default.yaml = monitoring\grafana\provisioning\dashboards\default.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "datasources", "datasources", "{625273A7-34B3-4EB8-9B7D-D2C9801BF6AD}"
+	ProjectSection(SolutionItems) = preProject
+		monitoring\grafana\provisioning\datasources\prometheus.yaml = monitoring\grafana\provisioning\datasources\prometheus.yaml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{36EABF40-20B9-40A8-BD20-8B5AAC1A8F0B}"
+	ProjectSection(SolutionItems) = preProject
+		.github\pull_request_template.md = .github\pull_request_template.md
+		.github\SECRETS.md = .github\SECRETS.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{7F039B7B-3986-4346-9031-1710E6AB09F4}"
+	ProjectSection(SolutionItems) = preProject
+		.github\workflows\cd.yml = .github\workflows\cd.yml
+		.github\workflows\ci.yml = .github\workflows\ci.yml
 	EndProjectSection
 EndProject
 Global
@@ -72,6 +141,13 @@ Global
 		{56C808B7-E381-AF6B-80DE-47C45CEB8934} = {1E912991-98E4-4EF4-9C03-58413D5FB13B}
 		{FD8F20FA-7364-24D8-8D4A-BBE06EBA2EA4} = {0B58923D-213A-4533-B339-74D2A3C3B779}
 		{9805182B-67CA-5D69-453E-DE27099DDCFB} = {0B58923D-213A-4533-B339-74D2A3C3B779}
+		{893A938A-5305-4394-83E0-7C1281D425E3} = {A6613316-EDA0-4AE8-B372-F5023442BF46}
+		{103E7C15-EF9D-4D5E-A2C8-CA27C3C8C382} = {A6613316-EDA0-4AE8-B372-F5023442BF46}
+		{6A91ACDD-0BD3-426E-AB6D-0B447D75F1CF} = {103E7C15-EF9D-4D5E-A2C8-CA27C3C8C382}
+		{6DCFAFAD-85CB-49EF-9035-A3569ABDB8D6} = {103E7C15-EF9D-4D5E-A2C8-CA27C3C8C382}
+		{67095505-CE81-4027-BB80-7C6B7BDDF0AF} = {6DCFAFAD-85CB-49EF-9035-A3569ABDB8D6}
+		{625273A7-34B3-4EB8-9B7D-D2C9801BF6AD} = {6DCFAFAD-85CB-49EF-9035-A3569ABDB8D6}
+		{7F039B7B-3986-4346-9031-1710E6AB09F4} = {36EABF40-20B9-40A8-BD20-8B5AAC1A8F0B}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D557F54A-E325-4878-8875-AFC3F188EC5E}
