@@ -29,30 +29,22 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		docker-compose.ci.yml = docker-compose.ci.yml
 		docker-compose.production.yml = docker-compose.production.yml
 		docker-compose.yml = docker-compose.yml
-		fix-seq.ps1 = fix-seq.ps1
-		generate-secrets.ps1 = generate-secrets.ps1
 		load-test.js = load-test.js
 		local-ci.ps1 = local-ci.ps1
 		local-ci.sh = local-ci.sh
 		README.md = README.md
 		ROADMAP.md = ROADMAP.md
-		setup-monitoring.ps1 = setup-monitoring.ps1
 		start-dev.ps1 = start-dev.ps1
 		stop-dev.ps1 = stop-dev.ps1
-		test-seq-logs.ps1 = test-seq-logs.ps1
-		testlog.ps1 = testlog.ps1
 		verify-config.ps1 = verify-config.ps1
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{AF877FE9-4D5E-4043-8FF7-43A7322CB8FA}"
 	ProjectSection(SolutionItems) = preProject
+		.dockerignore = .dockerignore
 		docs\DEPLOYMENT-GUIDE.md = docs\DEPLOYMENT-GUIDE.md
-		docs\DOCKER-PROFILES.md = docs\DOCKER-PROFILES.md
-		docs\FINAL-SUMMARY.md = docs\FINAL-SUMMARY.md
-		docs\GITHUB-PUSH-GUIDE.md = docs\GITHUB-PUSH-GUIDE.md
 		docs\MONITORING-GUIDE.md = docs\MONITORING-GUIDE.md
-		docs\MONITORING.md = docs\MONITORING.md
-		docs\PROJECT-CHECKLIST.md = docs\PROJECT-CHECKLIST.md
+		docs\SECRETS-MANAGEMENT.md = docs\SECRETS-MANAGEMENT.md
 		docs\WORKFLOW-ARCHITECTURE.md = docs\WORKFLOW-ARCHITECTURE.md
 	EndProjectSection
 EndProject
@@ -98,6 +90,12 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 	ProjectSection(SolutionItems) = preProject
 		.github\workflows\cd.yml = .github\workflows\cd.yml
 		.github\workflows\ci.yml = .github\workflows\ci.yml
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "performance-tests", "performance-tests", "{31063F86-586C-42E0-8B5C-096680499658}"
+	ProjectSection(SolutionItems) = preProject
+		performance-tests\load-test.js = performance-tests\load-test.js
+		performance-tests\README.md = performance-tests\README.md
 	EndProjectSection
 EndProject
 Global
