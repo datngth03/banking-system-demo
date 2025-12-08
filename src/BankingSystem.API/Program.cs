@@ -5,6 +5,7 @@ using BankingSystem.API.Middleware;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.ResponseCompression;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.EntityFrameworkCore;
 using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -74,6 +75,40 @@ builder.Services
 builder.Services.AddBankingSystemAuthorization();
 
 var app = builder.Build();
+
+// Apply database migrations automatically (only in non-Testing environments)
+if (!app.Environment.IsEnvironment("Testing"))
+{
+    using (var scope = app.Services.CreateScope())
+    {
+        var services = scope.ServiceProvider;
+        var logger = services.GetRequiredService<ILogger<Program>>();
+        
+        try
+        {
+            logger.LogInformation("Applying database migrations...");
+            
+            var context = services.GetRequiredService<BankingSystem.Infrastructure.Persistence.BankingSystemDbContext>();
+            
+            // Apply pending migrations
+            if (context.Database.GetPendingMigrations().Any())
+            {
+                logger.LogInformation("Pending migrations found. Applying...");
+                context.Database.Migrate();
+                logger.LogInformation("Database migrations applied successfully");
+            }
+            else
+            {
+                logger.LogInformation("Database is up to date");
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "An error occurred while migrating the database");
+            // Don't throw - let app continue, migrations can be applied manually
+        }
+    }
+}
 
 // Configure the HTTP request pipeline
 app.UseBankingSystemDefaults();
