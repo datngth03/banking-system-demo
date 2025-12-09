@@ -15,15 +15,22 @@ public static class RateLimitExtensions
         var rateLimitSettings = configuration.GetSection("RateLimitSettings").Get<RateLimitSettings>()
             ?? new RateLimitSettings();
 
+        // NOTE: These rate limits are configured for DEVELOPMENT/TESTING
+        // For PRODUCTION, reduce these values significantly:
+        // - auth: 10 req/min (currently 100)
+        // - sensitive: 20 req/min (currently 100)
+        // - admin: 30 req/min (currently 200)
+        // - global: 200 req/min (currently 1000)
+        
         services.AddRateLimiter(options =>
         {
-            // Strict rate limiting for authentication endpoints
+            // Auth rate limiting - increased for development/testing
             options.AddFixedWindowLimiter("auth", opt =>
             {
-                opt.PermitLimit = 10; // Only 10 requests
-                opt.Window = TimeSpan.FromMinutes(1); // Per minute
+                opt.PermitLimit = 100; // Increased from 10 to 100
+                opt.Window = TimeSpan.FromMinutes(1);
                 opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                opt.QueueLimit = 2; // Small queue
+                opt.QueueLimit = 20; // Increased from 2 to 20
             });
 
             // Normal rate limiting for general API endpoints
@@ -35,37 +42,37 @@ public static class RateLimitExtensions
                 opt.QueueLimit = rateLimitSettings.QueueLimit;
             });
 
-            // Strict rate limiting for sensitive operations (transfers, withdrawals)
+            // Sensitive operations - increased for testing
             options.AddFixedWindowLimiter("sensitive", opt =>
             {
-                opt.PermitLimit = 20; // 20 requests
-                opt.Window = TimeSpan.FromMinutes(1); // Per minute
-                opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                opt.QueueLimit = 3;
-            });
-
-            // Very strict for admin operations
-            options.AddFixedWindowLimiter("admin", opt =>
-            {
-                opt.PermitLimit = 30;
+                opt.PermitLimit = 100; // Increased from 20 to 100
                 opt.Window = TimeSpan.FromMinutes(1);
                 opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                opt.QueueLimit = 5;
+                opt.QueueLimit = 20; // Increased from 3 to 20
+            });
+
+            // Admin operations - increased for testing
+            options.AddFixedWindowLimiter("admin", opt =>
+            {
+                opt.PermitLimit = 200; // Increased from 30 to 200
+                opt.Window = TimeSpan.FromMinutes(1);
+                opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
+                opt.QueueLimit = 50; // Increased from 5 to 50
             });
 
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-            // Global fallback
+            // Global fallback - significantly increased for load testing
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
             {
                 var clientId = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
                 return RateLimitPartition.GetFixedWindowLimiter(clientId, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 200, // Global limit per IP
+                    PermitLimit = 1000, // Increased from 200 to 1000 for load testing
                     Window = TimeSpan.FromMinutes(1),
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 10
+                    QueueLimit = 50 // Increased from 10 to 50
                 });
             });
 

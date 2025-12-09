@@ -37,11 +37,12 @@ sudo apt-get install k6
 
 ## ?? Test Files
 
-| File | Type | Purpose |
-|------|------|---------|
-| `load-test.js` | Load Test | Test system under normal/expected load |
-| `stress-test.js` | Stress Test | *(TODO)* Find breaking point |
-| `spike-test.js` | Spike Test | *(TODO)* Test sudden traffic increase |
+| File | Type | Purpose | Prerequisites |
+|------|------|---------|---------------|
+| `load-test.js` | Load Test | Test public endpoints (health, swagger) | API running |
+| `auth-load-test.js` | Auth Test | Test authenticated endpoints | API + test users seeded |
+| `stress-test.js` | Stress Test | *(TODO)* Find breaking point | API running |
+| `spike-test.js` | Spike Test | *(TODO)* Test sudden traffic increase | API running |
 
 ---
 
