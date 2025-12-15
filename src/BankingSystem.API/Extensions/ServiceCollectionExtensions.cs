@@ -7,10 +7,13 @@ using Microsoft.Extensions.DependencyInjection;
 
 public static class ServiceCollectionExtensions
 {
-    public static IServiceCollection AddBankingSystemServices(this IServiceCollection services, IConfiguration configuration)
+    public static IServiceCollection AddBankingSystemServices(
+        this IServiceCollection services, 
+        IConfiguration configuration,
+        Microsoft.Extensions.Hosting.IHostEnvironment environment)
     {
         services.AddApplicationServices();
-        services.AddInfrastructureServices(configuration);
+        services.AddInfrastructureServices(configuration, environment);
         return services;
     }
 }

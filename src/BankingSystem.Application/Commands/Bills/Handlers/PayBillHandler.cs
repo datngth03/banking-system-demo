@@ -1,13 +1,15 @@
-using MediatR;
+﻿using BankingSystem.Application.Commands.Bills;
+using BankingSystem.Application.Constants;
+using BankingSystem.Application.Exceptions;
 using BankingSystem.Application.Interfaces;
-using BankingSystem.Application.Commands.Bills;
+using BankingSystem.Application.Models; // ← THÊM
 using BankingSystem.Domain.Entities;
 using BankingSystem.Domain.Enums;
-using Microsoft.EntityFrameworkCore;
-using BankingSystem.Application.Exceptions;
 using BankingSystem.Domain.Exceptions;
-using BankingSystem.Application.Constants;
+using MediatR;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
+using System.Text.Json; // ← THÊM
 
 namespace BankingSystem.Application.Commands.Bills.Handlers;
 
@@ -29,20 +31,23 @@ public class PayBillHandler : IRequestHandler<PayBillCommand, Unit>
 
     public async Task<Unit> Handle(PayBillCommand request, CancellationToken cancellationToken)
     {
+        // Include User để lấy thông tin gửi email/notification
         var bill = await _context.Bills
             .Include(b => b.Account)
+                .ThenInclude(a => a.User) // ← THÊM
             .FirstOrDefaultAsync(b => b.Id == request.BillId, cancellationToken);
 
         if (bill == null)
             throw new NotFoundException(string.Format(ValidationMessages.BillNotFound, request.BillId));
 
         var account = await _context.Accounts
+            .Include(a => a.User) // ← THÊM
             .FirstOrDefaultAsync(a => a.Id == request.AccountId, cancellationToken);
 
         if (account == null)
             throw new NotFoundException(string.Format(ValidationMessages.AccountNotFound, request.AccountId));
 
-        // Authorization: Users can only pay bills from their own accounts, staff can pay from any
+        // Authorization checks...
         if (!_currentUserService.IsStaff && account.UserId != _currentUserService.UserId)
         {
             _logger.LogWarning(
@@ -54,7 +59,6 @@ public class PayBillHandler : IRequestHandler<PayBillCommand, Unit>
             throw new ForbiddenException("You can only pay bills from your own accounts");
         }
 
-        // Also verify that the bill belongs to the account being charged
         if (bill.AccountId != request.AccountId)
         {
             _logger.LogWarning(
@@ -95,14 +99,49 @@ public class PayBillHandler : IRequestHandler<PayBillCommand, Unit>
         };
 
         _context.Transactions.Add(transaction);
+
+        // 🔄 CREATE OUTBOX MESSAGE 
+        var notificationData = new
+        {
+            UserId = account.UserId,
+            UserEmail = account.User?.Email,
+            UserFirstName = account.User?.FirstName,
+            UserLastName = account.User?.LastName,
+            // ✅ BILL INFORMATION
+            BillId = bill.Id,
+            Biller = bill.Biller,
+            BillNumber = bill.BillNumber,
+            // ✅ TRANSACTION INFORMATION
+            TransactionId = transaction.Id,
+            Amount = bill.Amount.Amount,
+            Currency = bill.Amount.Currency,
+            AccountNumber = account.AccountNumber,
+            NewBalance = account.Balance.Amount,
+            TransactionReference = transaction.ReferenceNumber,
+            PaidDate = bill.PaidDate
+        };
+
+        var outboxMessage = new OutboxMessage
+        {
+            Id = Guid.NewGuid(),
+            EventType = "BillPaymentCompletedEvent", // ← Specific event type
+            EventData = JsonSerializer.Serialize(notificationData),
+            CreatedAt = DateTime.UtcNow,
+            IsProcessed = false
+        };
+
+        _context.OutboxMessages.Add(outboxMessage);
+
+        // ✅ ATOMIC TRANSACTION: Bill + Account + Transaction + Outbox
         await _context.SaveChangesAsync(cancellationToken);
 
         _logger.LogInformation(
-            "Bill {BillId} paid: {Amount} from account {AccountId} by user {UserId}",
+            "Bill {BillId} paid: {Amount} from account {AccountId} by user {UserId}. Outbox message {OutboxId} created.",
             bill.Id,
             bill.Amount.Amount,
             account.Id,
-            _currentUserService.UserId);
+            _currentUserService.UserId,
+            outboxMessage.Id);
 
         return Unit.Value;
     }

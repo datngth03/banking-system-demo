@@ -18,7 +18,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 // Add BankingSystem services
-builder.Services.AddBankingSystemServices(builder.Configuration);
+builder.Services.AddBankingSystemServices(builder.Configuration, builder.Environment);
 builder.Services.AddBankingSystemSwagger();
 builder.Services.AddBankingSystemCors(builder.Configuration);
 builder.Services.AddBankingSystemHealthChecks(builder.Configuration);
@@ -83,13 +83,13 @@ if (!app.Environment.IsEnvironment("Testing"))
     {
         var services = scope.ServiceProvider;
         var logger = services.GetRequiredService<ILogger<Program>>();
-        
+
         try
         {
             logger.LogInformation("Applying database migrations...");
-            
+
             var context = services.GetRequiredService<BankingSystem.Infrastructure.Persistence.BankingSystemDbContext>();
-            
+
             // Apply pending migrations
             if (context.Database.GetPendingMigrations().Any())
             {
@@ -105,6 +105,7 @@ if (!app.Environment.IsEnvironment("Testing"))
         catch (Exception ex)
         {
             logger.LogError(ex, "An error occurred while migrating the database");
+            throw;
             // Don't throw - let app continue, migrations can be applied manually
         }
     }

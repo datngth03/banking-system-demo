@@ -7,7 +7,8 @@ Complete guide for deploying Banking System API to various environments.
 ## ?? **PRE-DEPLOYMENT CHECKLIST**
 
 ### **Required Before Any Deployment**
-- [ ] All tests passing locally (`.\local-ci.ps1`)
+- [ ] All tests passing locally (`dotnet test`)
+- [ ] Load tests completed successfully (`.\test-workflow.ps1`)
 - [ ] Database migrations reviewed
 - [ ] Environment variables configured
 - [ ] Secrets generated and secured

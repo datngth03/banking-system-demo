@@ -72,21 +72,36 @@ public class HangfireDashboardAuthorizationFilter : IDashboardAuthorizationFilte
     {
         var httpContext = context.GetHttpContext();
 
-        // Check if user is authenticated
-        if (!httpContext.User.Identity?.IsAuthenticated ?? true)
+        // Option 1: Basic Auth (username/password prompt)
+        var authHeader = httpContext.Request.Headers["Authorization"].ToString();
+        if (authHeader.StartsWith("Basic "))
         {
-            return false;
+            var encodedCredentials = authHeader.Substring(6);
+            var credentials = System.Text.Encoding.UTF8.GetString(
+                Convert.FromBase64String(encodedCredentials)).Split(':');
+
+            // Check credentials (you can move this to appsettings)
+            if (credentials[0] == "admin" && credentials[1] == "HangfireAdmin@2024")
+            {
+                return true;
+            }
         }
 
-        // Check if user has Admin role
-        var isAdmin = httpContext.User.IsInRole(Roles.Admin);
-
-        // In development, you might want to allow Manager role as well
+        // Option 2: Check if user authenticated via JWT (for API calls)
+        if (httpContext.User.Identity?.IsAuthenticated ?? false)
+        {
+            var isAdmin = httpContext.User.IsInRole(Roles.Admin);
 #if DEBUG
-        var isManager = httpContext.User.IsInRole(Roles.Manager);
-        return isAdmin || isManager;
+            var isManager = httpContext.User.IsInRole(Roles.Manager);
+            return isAdmin || isManager;
 #else
-        return isAdmin;
+            return isAdmin;
 #endif
+        }
+
+        // Prompt for Basic Auth
+        httpContext.Response.Headers["WWW-Authenticate"] = "Basic realm=\"Hangfire Dashboard\"";
+        httpContext.Response.StatusCode = 401;
+        return false;
     }
 }

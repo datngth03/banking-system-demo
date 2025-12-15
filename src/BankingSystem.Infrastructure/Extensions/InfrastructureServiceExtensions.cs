@@ -15,12 +15,14 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Microsoft.Extensions.Hosting;
 
 public static class InfrastructureServiceExtensions
 {
     public static IServiceCollection AddInfrastructureServices(
         this IServiceCollection services,
-        IConfiguration configuration)
+        IConfiguration configuration,
+        IHostEnvironment environment)
     {
         // Configuration Settings
         services.Configure<JwtSettings>(configuration.GetSection("JwtSettings"));
@@ -55,7 +57,26 @@ public static class InfrastructureServiceExtensions
 
         // Services
         services.AddScoped<IApplicationDbContext>(sp => sp.GetRequiredService<BankingSystemDbContext>());
-        services.AddScoped<IEmailService, EmailService>();
+        
+        // Email Service - Use Mock in Development if SMTP not configured
+        if (environment.IsDevelopment())
+        {
+            var emailSettings = configuration.GetSection("EmailSettings").Get<EmailSettings>();
+            if (string.IsNullOrEmpty(emailSettings?.Username) && string.IsNullOrEmpty(emailSettings?.Password))
+            {
+                // Use Mock Email Service when SMTP credentials are not configured
+                services.AddScoped<IEmailService, MockEmailService>();
+            }
+            else
+            {
+                services.AddScoped<IEmailService, EmailService>();
+            }
+        }
+        else
+        {
+            services.AddScoped<IEmailService, EmailService>();
+        }
+        
         services.AddScoped<INotificationService, NotificationService>();
         services.AddScoped<IAccountService, AccountService>();
         services.AddScoped<IUserService, UserService>();

@@ -20,7 +20,7 @@ public class EmailService : IEmailService
         _emailSettings = emailSettings.Value;
     }
 
-    public async Task SendEmailAsync(string to, string subject, string body)
+    public async Task SendEmailAsync(string to, string subject, string body, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -34,7 +34,7 @@ public class EmailService : IEmailService
             };
             mailMessage.To.Add(to);
 
-            await client.SendMailAsync(mailMessage);
+            await client.SendMailAsync(mailMessage, cancellationToken);
             _logger.LogInformation("Email sent successfully to {Email}", to);
         }
         catch (Exception ex)
@@ -44,7 +44,7 @@ public class EmailService : IEmailService
         }
     }
 
-    public async Task SendEmailAsync(string to, string[] cc, string subject, string body)
+    public async Task SendEmailAsync(string to, string[] cc, string subject, string body, CancellationToken cancellationToken = default)
     {
         try
         {
@@ -63,7 +63,7 @@ public class EmailService : IEmailService
                 mailMessage.CC.Add(ccEmail);
             }
 
-            await client.SendMailAsync(mailMessage);
+            await client.SendMailAsync(mailMessage, cancellationToken);
             _logger.LogInformation("Email sent successfully to {Email} with CC {Cc}", to, string.Join(",", cc));
         }
         catch (Exception ex)
@@ -73,7 +73,7 @@ public class EmailService : IEmailService
         }
     }
 
-    public async Task SendPasswordResetEmailAsync(string to, string resetToken)
+    public async Task SendPasswordResetEmailAsync(string to, string resetToken, CancellationToken cancellationToken = default)
     {
         var resetLink = $"https://yourdomain.com/reset-password?token={resetToken}";
         var body = $@"
@@ -82,10 +82,10 @@ public class EmailService : IEmailService
             <a href='{resetLink}'>Reset Password</a>
             <p>This link will expire in 24 hours.</p>";
 
-        await SendEmailAsync(to, "Password Reset Request", body);
+        await SendEmailAsync(to, "Password Reset Request", body, cancellationToken);
     }
 
-    public async Task SendWelcomeEmailAsync(string to, string firstName)
+    public async Task SendWelcomeEmailAsync(string to, string firstName, CancellationToken cancellationToken = default)
     {
         var body = $@"
             <h2>Welcome to Banking System!</h2>
@@ -93,10 +93,10 @@ public class EmailService : IEmailService
             <p>Thank you for creating an account with us. We're excited to have you on board!</p>
             <p>Visit our website to get started.</p>";
 
-        await SendEmailAsync(to, "Welcome to Banking System", body);
+        await SendEmailAsync(to, "Welcome to Banking System", body, cancellationToken);
     }
 
-    public async Task SendTransactionConfirmationEmailAsync(string to, string accountNumber, decimal amount, string transactionType)
+    public async Task SendTransactionConfirmationEmailAsync(string to, string accountNumber, decimal amount, string transactionType, CancellationToken cancellationToken = default)
     {
         var body = $@"
             <h2>Transaction Confirmation</h2>
@@ -108,7 +108,7 @@ public class EmailService : IEmailService
                 <li><strong>Date:</strong> {DateTime.UtcNow:yyyy-MM-dd HH:mm:ss}</li>
             </ul>";
 
-        await SendEmailAsync(to, "Transaction Confirmation", body);
+        await SendEmailAsync(to, "Transaction Confirmation", body, cancellationToken);
     }
 
     private SmtpClient CreateSmtpClient()

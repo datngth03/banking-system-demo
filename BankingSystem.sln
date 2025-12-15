@@ -25,25 +25,19 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.env = .env
 		.env.example = .env.example
 		.gitignore = .gitignore
-		apply-migrations.ps1 = apply-migrations.ps1
+		CV-NguyenThanhDat-SoftwareEngineer.md = CV-NguyenThanhDat-SoftwareEngineer.md
 		docker-compose.ci.yml = docker-compose.ci.yml
 		docker-compose.production.yml = docker-compose.production.yml
 		docker-compose.yml = docker-compose.yml
-		load-test.js = load-test.js
-		local-ci.ps1 = local-ci.ps1
-		local-ci.sh = local-ci.sh
 		README.md = README.md
-		ROADMAP.md = ROADMAP.md
-		start-dev.ps1 = start-dev.ps1
-		stop-dev.ps1 = stop-dev.ps1
-		verify-config.ps1 = verify-config.ps1
+		test-workflow.ps1 = test-workflow.ps1
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{AF877FE9-4D5E-4043-8FF7-43A7322CB8FA}"
 	ProjectSection(SolutionItems) = preProject
-		.dockerignore = .dockerignore
 		docs\DEPLOYMENT-GUIDE.md = docs\DEPLOYMENT-GUIDE.md
 		docs\MONITORING-GUIDE.md = docs\MONITORING-GUIDE.md
+		docs\RATE-LIMITING-CONFIG.md = docs\RATE-LIMITING-CONFIG.md
 		docs\SECRETS-MANAGEMENT.md = docs\SECRETS-MANAGEMENT.md
 		docs\WORKFLOW-ARCHITECTURE.md = docs\WORKFLOW-ARCHITECTURE.md
 	EndProjectSection
@@ -56,6 +50,8 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "monitoring", "monitoring", "{A6613316-EDA0-4AE8-B372-F5023442BF46}"
 	ProjectSection(SolutionItems) = preProject
 		monitoring\alertmanager.yml = monitoring\alertmanager.yml
+		monitoring\grafana-dashboard.json = monitoring\grafana-dashboard.json
+		monitoring\grafana-datasource.yml = monitoring\grafana-datasource.yml
 		monitoring\prometheus.yml = monitoring\prometheus.yml
 	EndProjectSection
 EndProject
@@ -67,6 +63,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "grafana", "grafana", "{103E7C15-EF9D-4D5E-A2C8-CA27C3C8C382}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "dashboards", "dashboards", "{6A91ACDD-0BD3-426E-AB6D-0B447D75F1CF}"
+	ProjectSection(SolutionItems) = preProject
+		monitoring\grafana\dashboards\banking-system-overview.json = monitoring\grafana\dashboards\banking-system-overview.json
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "provisioning", "provisioning", "{6DCFAFAD-85CB-49EF-9035-A3569ABDB8D6}"
 EndProject
@@ -82,7 +81,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "datasources", "datasources"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".github", ".github", "{36EABF40-20B9-40A8-BD20-8B5AAC1A8F0B}"
 	ProjectSection(SolutionItems) = preProject
-		.github\pull_request_template.md = .github\pull_request_template.md
 		.github\SECRETS.md = .github\SECRETS.md
 	EndProjectSection
 EndProject
@@ -94,6 +92,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "workflows", "workflows", "{
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "performance-tests", "performance-tests", "{31063F86-586C-42E0-8B5C-096680499658}"
 	ProjectSection(SolutionItems) = preProject
+		performance-tests\auth-load-test.js = performance-tests\auth-load-test.js
 		performance-tests\load-test.js = performance-tests\load-test.js
 		performance-tests\README.md = performance-tests\README.md
 	EndProjectSection

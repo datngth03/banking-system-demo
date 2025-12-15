@@ -58,28 +58,37 @@ Azure Key Vault / Secrets (production)
 
 ```powershell
 # No setup needed - uses appsettings.Development.json
-dotnet run --project src/BankingSystem.API
+cd src/BankingSystem.API
+dotnet run
 ```
 
 **Monitoring URLs:**
 - Seq: `http://localhost:5341`
-- No Prometheus/Grafana (optional)
+- No Prometheus/Grafana (optional - use Docker for full stack)
 
 #### **Docker Local**
 
 ```powershell
-# Start full stack
-docker-compose --profile monitoring up -d
+# Start full monitoring stack
+docker-compose up -d
 
-# Generate test logs
-.\testlog.ps1
+# All services will start including:
+# - Banking API
+# - PostgreSQL (business + hangfire)
+# - Redis
+# - Seq
+# - Prometheus
+# - Grafana
 ```
 
 **Monitoring URLs:**
-- Seq: `http://localhost:5341`
-- Prometheus: `http://localhost:9090`
-- Grafana: `http://localhost:3000` (admin/admin)
-- API Metrics: `http://localhost:5000/metrics`
+- **API:** `http://localhost:5000`
+- **Swagger:** `http://localhost:5000/swagger`
+- **Seq Logs:** `http://localhost:5341`
+- **Prometheus:** `http://localhost:9090`
+- **Grafana:** `http://localhost:3000` (admin/admin)
+- **Metrics Endpoint:** `http://localhost:5000/metrics`
+- **Health Check:** `http://localhost:5000/health`
 
 #### **CI/CD (GitHub Actions)**
 
@@ -499,29 +508,36 @@ start http://localhost:9090/graph
 ## ?? Quick Start Commands
 
 ```powershell
-# Local development
-dotnet run --project src/BankingSystem.API
+# Local development (API only)
+cd src/BankingSystem.API
+dotnet run
 
-# Docker full stack
-docker-compose --profile monitoring up -d
+# Docker full stack with monitoring
+docker-compose up -d
 
-# Generate logs
-.\testlog.ps1
+# View services status
+docker-compose ps
 
-# Setup monitoring
-.\setup-monitoring.ps1
+# View API logs
+docker-compose logs -f banking-api
 
-# View logs
+# View Seq logs
 start http://localhost:5341
 
-# View metrics
+# View Prometheus metrics
 start http://localhost:9090
 
-# View dashboards
+# View Grafana dashboards
 start http://localhost:3000
+
+# Run tests to generate logs
+.\test-workflow.ps1
+
+# Stop all services
+docker-compose down
 ```
 
 ---
 
-**Last Updated:** December 2024
+**Last Updated:** December 2025
 **Maintained by:** Banking System Team

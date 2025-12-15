@@ -348,9 +348,9 @@ Before deploying to production:
 gh secret list
 
 # Expected output:
-# DB_CONNECTION_STAGING           Updated 2024-12-03
-# DB_CONNECTION_PRODUCTION         Updated 2024-12-03
-# JWT_SECRET_STAGING               Updated 2024-12-03
+# DB_CONNECTION_STAGING           Updated 2025-12-03
+# DB_CONNECTION_PRODUCTION         Updated 2025-12-03
+# JWT_SECRET_STAGING               Updated 2025-12-03
 # ...
 ```
 
@@ -402,5 +402,5 @@ If secrets are compromised:
 
 ---
 
-**Last Updated:** December 2024
+**Last Updated:** December 2025
 **Review Schedule:** Quarterly

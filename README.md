@@ -192,7 +192,7 @@ $body = @{
   firstName = "John"
   lastName = "Doe"
   email = "john@example.com"
-  password = "Secure!2024$Pass"
+  password = "Secure!2025$Pass"
   phoneNumber = "+1234567890"
   dateOfBirth = "1990-01-01T00:00:00Z"
   street = "123 Main St"
@@ -208,7 +208,7 @@ Invoke-WebRequest -Uri "http://localhost:5000/api/v1/auth/register" `
 # Login
 $login = @{
   email = "john@example.com"
-  password = "Secure!2024$Pass"
+  password = "Secure!2025$Pass"
 } | ConvertTo-Json
 
 Invoke-WebRequest -Uri "http://localhost:5000/api/v1/auth/login" `
@@ -745,4 +745,4 @@ start http://localhost:5000/swagger
 
 *Built with ❤️ using .NET 8, Clean Architecture, and modern DevOps practices*  
 *Perfect for portfolio, learning, and production use*  
-*Last Updated: December 2024*
+*Last Updated: December 2025*

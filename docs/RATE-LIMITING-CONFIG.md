@@ -250,6 +250,6 @@ k6 run performance-tests/load-test.js
 
 ---
 
-*Last Updated: 2024-12-08*  
+*Last Updated: 2025-12-08*  
 *Status: Development configuration active*  
 *Action Required: Update before production deployment*
