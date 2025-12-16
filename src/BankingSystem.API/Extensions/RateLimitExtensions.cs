@@ -15,22 +15,32 @@ public static class RateLimitExtensions
         var rateLimitSettings = configuration.GetSection("RateLimitSettings").Get<RateLimitSettings>()
             ?? new RateLimitSettings();
 
-        // NOTE: These rate limits are configured for DEVELOPMENT/TESTING
-        // For PRODUCTION, reduce these values significantly:
-        // - auth: 10 req/min (currently 100)
-        // - sensitive: 20 req/min (currently 100)
-        // - admin: 30 req/min (currently 200)
-        // - global: 200 req/min (currently 1000)
+        // ENVIRONMENT-BASED RATE LIMITING
+        // Production values are strict for security
+        // Development values are relaxed for testing
+        var environment = configuration.GetValue<string>("ASPNETCORE_ENVIRONMENT") ?? "Development";
+        var isProduction = environment == "Production";
+        var isStaging = environment == "Staging";
+        
+        // Determine appropriate limits based on environment
+        var authLimit = isProduction ? 10 : (isStaging ? 50 : 100);
+        var authQueue = isProduction ? 2 : (isStaging ? 10 : 20);
+        var sensitiveLimit = isProduction ? 20 : (isStaging ? 50 : 100);
+        var sensitiveQueue = isProduction ? 3 : (isStaging ? 10 : 20);
+        var adminLimit = isProduction ? 30 : (isStaging ? 100 : 200);
+        var adminQueue = isProduction ? 5 : (isStaging ? 20 : 50);
+        var globalLimit = isProduction ? 200 : (isStaging ? 500 : 1000);
+        var globalQueue = isProduction ? 10 : (isStaging ? 20 : 50);
         
         services.AddRateLimiter(options =>
         {
-            // Auth rate limiting - increased for development/testing
+            // Auth rate limiting - protect login/register endpoints
             options.AddFixedWindowLimiter("auth", opt =>
             {
-                opt.PermitLimit = 100; // Increased from 10 to 100
+                opt.PermitLimit = authLimit;
                 opt.Window = TimeSpan.FromMinutes(1);
                 opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                opt.QueueLimit = 20; // Increased from 2 to 20
+                opt.QueueLimit = authQueue;
             });
 
             // Normal rate limiting for general API endpoints
@@ -42,37 +52,37 @@ public static class RateLimitExtensions
                 opt.QueueLimit = rateLimitSettings.QueueLimit;
             });
 
-            // Sensitive operations - increased for testing
+            // Sensitive operations - money transfers, withdrawals
             options.AddFixedWindowLimiter("sensitive", opt =>
             {
-                opt.PermitLimit = 100; // Increased from 20 to 100
+                opt.PermitLimit = sensitiveLimit;
                 opt.Window = TimeSpan.FromMinutes(1);
                 opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                opt.QueueLimit = 20; // Increased from 3 to 20
+                opt.QueueLimit = sensitiveQueue;
             });
 
-            // Admin operations - increased for testing
+            // Admin operations
             options.AddFixedWindowLimiter("admin", opt =>
             {
-                opt.PermitLimit = 200; // Increased from 30 to 200
+                opt.PermitLimit = adminLimit;
                 opt.Window = TimeSpan.FromMinutes(1);
                 opt.QueueProcessingOrder = QueueProcessingOrder.OldestFirst;
-                opt.QueueLimit = 50; // Increased from 5 to 50
+                opt.QueueLimit = adminQueue;
             });
 
             options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
 
-            // Global fallback - significantly increased for load testing
+            // Global fallback - per-IP protection
             options.GlobalLimiter = PartitionedRateLimiter.Create<HttpContext, string>(context =>
             {
                 var clientId = context.Connection.RemoteIpAddress?.ToString() ?? "unknown";
 
                 return RateLimitPartition.GetFixedWindowLimiter(clientId, _ => new FixedWindowRateLimiterOptions
                 {
-                    PermitLimit = 1000, // Increased from 200 to 1000 for load testing
+                    PermitLimit = globalLimit,
                     Window = TimeSpan.FromMinutes(1),
                     QueueProcessingOrder = QueueProcessingOrder.OldestFirst,
-                    QueueLimit = 50 // Increased from 10 to 50
+                    QueueLimit = globalQueue
                 });
             });
 
@@ -84,6 +94,7 @@ public static class RateLimitExtensions
                 {
                     error = "Too many requests",
                     message = "Rate limit exceeded. Please try again later.",
+                    environment = environment,
                     retryAfter = context.Lease.TryGetMetadata(MetadataName.RetryAfter, out var retryAfter)
                         ? retryAfter.ToString()
                         : "60 seconds"
