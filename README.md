@@ -423,6 +423,45 @@ banking-system-demo/
 
 ## 🚢 **Deployment**
 
+### **Local Development**
+
+```powershell
+# Quick start with Docker Compose
+docker-compose up -d
+```
+
+### **Azure Deployment (Recommended for Production)**
+
+> **📘 Complete Vietnamese guide:** [docs/AZURE-DEPLOYMENT-VI.md](./docs/AZURE-DEPLOYMENT-VI.md)
+
+**Automated deployment with Bicep (Infrastructure as Code):**
+
+```powershell
+# Deploy to development environment
+.\azure\scripts\deploy.ps1 -Environment dev
+
+# Deploy to production with specific version
+.\azure\scripts\deploy.ps1 -Environment prod -ImageTag v1.0.0
+
+# Update only application (skip infrastructure)
+.\azure\scripts\deploy.ps1 -Environment prod -SkipInfrastructure -ImageTag v1.0.1
+```
+
+**What gets deployed:**
+- ✅ Azure Container Apps (auto-scaling 2-10 replicas)
+- ✅ PostgreSQL Flexible Servers (Business + Hangfire)
+- ✅ Azure Cache for Redis
+- ✅ Azure Key Vault (secrets management)
+- ✅ Application Insights (monitoring)
+- ✅ Log Analytics Workspace
+
+**Deployment time:** ~15-20 minutes  
+**Monthly cost:** $93 (dev) | $362 (prod)
+
+See [azure/scripts/README.md](./azure/scripts/README.md) for detailed automation guide.
+
+---
+
 ### **Docker Deployment**
 
 ```powershell
@@ -450,10 +489,10 @@ kubectl get services -n banking-system
 kubectl logs -f deployment/banking-api -n banking-system
 ```
 
-### **Azure Deployment**
+### **Azure Manual Deployment**
 
 ```powershell
-# Deploy to Azure Container Apps
+# Deploy to Azure Container Apps (manual)
 az containerapp create \
   --name banking-api \
   --resource-group rg-banking \
@@ -465,55 +504,10 @@ az containerapp create \
   --max-replicas 10
 ```
 
-**Complete deployment guide:** `docs/DEPLOYMENT-GUIDE.md`
-
----
-
-## 🔄 **CI/CD Pipeline**
-
-### **GitHub Actions Workflows**
-
-1. **CI Workflow** (`.github/workflows/ci.yml`)
-   - ✅ Build .NET solution
-   - ✅ Run unit tests (50+)
-   - ✅ Run integration tests (with PostgreSQL + Redis)
-   - ✅ Code analysis
-   - ✅ Security scanning (Trivy)
-   - **Trigger:** Push to main/develop, Pull Requests
-   - **Duration:** ~5-7 minutes
-
-2. **CD Workflow** (`.github/workflows/cd.yml`)
-   - ✅ Check CI status (must pass)
-   - ✅ Build Docker image
-   - ✅ Security scan Docker image
-   - ✅ Deploy to staging
-   - ✅ Deploy to production (on tags, requires approval)
-   - **Trigger:** CI success on main, version tags (v*.*.*)
-   - **Duration:** ~10-15 minutes
-
-### **Workflow Architecture**
-
-```
-Push to main
-    ↓
-┌─────────────────────┐
-│   CI Workflow       │ (~5 min)
-│   - Build ✅        │
-│   - Unit Tests ✅   │
-│   - Integration ✅  │
-│   - Security ✅     │
-└─────────┬───────────┘
-          ↓ (on success)
-┌─────────────────────┐
-│   CD Workflow       │ (~10 min)
-│   - Check CI ✅     │
-│   - Docker Build ✅ │
-│   - Deploy Stage ✅ │
-│   - Deploy Prod ⏸️  │ (requires approval)
-└─────────────────────┘
-```
-
-**Complete workflow guide:** `docs/WORKFLOW-ARCHITECTURE.md`
+**📚 Complete guides:**
+- **Azure (Vietnamese):** [docs/AZURE-DEPLOYMENT-VI.md](./docs/AZURE-DEPLOYMENT-VI.md)
+- **General Deployment:** [docs/DEPLOYMENT-GUIDE.md](./docs/DEPLOYMENT-GUIDE.md)
+- **Kubernetes:** [k8s/README.md](./k8s/README.md)
 
 ---
 
@@ -521,228 +515,35 @@ Push to main
 
 ### **Available Guides**
 
-| Document | Description | Status |
-|----------|-------------|--------|
-| **DEPLOYMENT-GUIDE.md** | Production deployment (Docker, K8s, Azure) | ✅ Complete |
-| **MONITORING-GUIDE.md** | Observability setup (Prometheus, Grafana, Seq) | ✅ Complete |
-| **RATE-LIMITING-CONFIG.md** | API protection and rate limits | ✅ Complete |
-| **WORKFLOW-ARCHITECTURE.md** | CI/CD pipeline documentation | ✅ Complete |
-| **README.md** (performance-tests/) | Load testing guide | ✅ Complete |
+| Document | Description | Language | Status |
+|----------|-------------|----------|--------|
+| **AZURE-DEPLOYMENT-VI.md** | Complete Azure deployment guide | 🇻🇳 Vietnamese | ✅ Complete |
+| **DEPLOYMENT-GUIDE.md** | Production deployment (Docker, K8s, Azure) | 🇬🇧 English | ✅ Complete |
+| **MONITORING-GUIDE.md** | Observability setup (Prometheus, Grafana, Seq) | 🇬🇧 English | ✅ Complete |
+| **RATE-LIMITING-CONFIG.md** | API protection and rate limits | 🇬🇧 English | ✅ Complete |
+| **WORKFLOW-ARCHITECTURE.md** | CI/CD pipeline documentation | 🇬🇧 English | ✅ Complete |
+| **README.md** (performance-tests/) | Load testing guide | 🇬🇧 English | ✅ Complete |
+| **README.md** (azure/scripts/) | Azure automation scripts | 🇬🇧 English | ✅ Complete |
+| **README.md** (azure/appsettings/) | Azure configuration | 🇬🇧 English | ✅ Complete |
 
-**All documentation in `docs/` folder.**
+### **Quick Links**
 
----
+**🚀 Deployment:**
+- [Azure Deployment (VI)](./docs/AZURE-DEPLOYMENT-VI.md) - Hướng dẫn đầy đủ bằng tiếng Việt
+- [Deployment Guide](./docs/DEPLOYMENT-GUIDE.md) - General deployment for all platforms
+- [Azure Scripts](./azure/scripts/README.md) - Automated Bicep deployment
 
-## 🛠️ **Useful Commands**
+**📊 Operations:**
+- [Monitoring Guide](./docs/MONITORING-GUIDE.md) - Prometheus + Grafana + Seq setup
+- [Rate Limiting](./docs/RATE-LIMITING-CONFIG.md) - API protection configuration
 
-### **Development Workflow**
+**🔧 Development:**
+- [CI/CD Workflows](./docs/WORKFLOW-ARCHITECTURE.md) - GitHub Actions pipelines
+- [Load Testing](./performance-tests/README.md) - k6 performance testing
 
-```powershell
-# Start all services
-docker-compose up -d
+**☁️ Infrastructure:**
+- [Bicep Templates](./azure/bicep/) - Infrastructure as Code for Azure
+- [Kubernetes Manifests](./k8s/) - K8s deployment files
+- [Azure Config](./azure/appsettings/) - Environment-specific settings
 
-# View API logs
-docker-compose logs -f banking-api
-
-# Restart API only
-docker-compose restart banking-api
-
-# Rebuild and restart API
-docker-compose build banking-api
-docker-compose up -d banking-api
-
-# Stop all services
-docker-compose down
-
-# Clean restart (removes volumes)
-docker-compose down -v
-docker-compose up -d
-```
-
-### **Database Commands**
-
-```powershell
-# Check business database tables
-docker exec bankingsystem-postgres-business \
-  psql -U postgres -d BankingSystemDb -c "\dt"
-
-# Check Hangfire tables
-docker exec bankingsystem-postgres-hangfire \
-  psql -U postgres -d BankingSystemHangfire -c "\dt hangfire.*"
-
-# Count users
-docker exec bankingsystem-postgres-business \
-  psql -U postgres -d BankingSystemDb -c "SELECT COUNT(*) FROM users;"
-
-# View recent transactions
-docker exec bankingsystem-postgres-business \
-  psql -U postgres -d BankingSystemDb -c "SELECT * FROM transactions ORDER BY created_at DESC LIMIT 10;"
-```
-
-### **Testing Commands**
-
-```powershell
-# Complete testing workflow
-.\test-workflow.ps1
-
-# Manual unit tests
-dotnet test tests/BankingSystem.Tests
-
-# Manual integration tests
-dotnet test tests/BankingSystem.IntegrationTests
-
-# Manual load tests
-k6 run performance-tests/load-test.js
-k6 run performance-tests/auth-load-test.js
-
-# Tests with coverage
-dotnet test --collect:"XPlat Code Coverage"
-```
-
----
-
-## 🤝 **Contributing**
-
-This is a portfolio/demo project, but contributions are welcome!
-
-### **Development Workflow**
-
-```bash
-# 1. Fork and clone
-git clone https://github.com/YOUR-USERNAME/banking-system-demo
-cd banking-system-demo
-
-# 2. Create feature branch
-git checkout -b feature/your-feature
-
-# 3. Make changes and test
-docker-compose up -d
-dotnet test
-.\test-workflow.ps1
-
-# 4. Commit and push
-git add .
-git commit -m "feat: your feature description"
-git push origin feature/your-feature
-
-# 5. Create Pull Request
-# CI will run automatically
-```
-
----
-
-## 📄 **License**
-
-MIT License - See [LICENSE](LICENSE) file for details.
-
----
-
-## 👨‍💻 **Author**
-
-**Dat Nguyen**
-- GitHub: [@datngth03](https://github.com/datngth03)
-- Project: [banking-system-demo](https://github.com/datngth03/banking-system-demo)
-
----
-
-## 🙏 **Technologies Used**
-
-**Backend Framework:**
-- [.NET 8](https://dotnet.microsoft.com/) - Latest LTS version
-- [ASP.NET Core](https://docs.microsoft.com/aspnet/core/) - Web API framework
-- [Entity Framework Core](https://docs.microsoft.com/ef/core/) - ORM
-- [MediatR](https://github.com/jbogard/MediatR) - CQRS implementation
-- [FluentValidation](https://fluentvalidation.net/) - Input validation
-- [AutoMapper](https://automapper.org/) - Object mapping
-
-**Infrastructure:**
-- [PostgreSQL 16](https://www.postgresql.org/) - Primary database
-- [Redis 7](https://redis.io/) - Caching layer
-- [Hangfire](https://www.hangfire.io/) - Background jobs
-- [Docker](https://www.docker.com/) - Containerization
-
-**Monitoring & Logging:**
-- [Serilog](https://serilog.net/) - Structured logging
-- [Seq](https://datalust.co/seq) - Log aggregation
-- [Prometheus](https://prometheus.io/) - Metrics collection
-- [Grafana](https://grafana.com/) - Metrics visualization
-
-**Testing:**
-- [xUnit](https://xunit.net/) - Unit testing framework
-- [k6](https://k6.io/) - Load testing tool
-
----
-
-## 🎯 **Project Highlights**
-
-### **For Recruiters**
-
-This project demonstrates:
-
-**Architecture & Design:**
-- ✅ Clean Architecture with clear layer separation
-- ✅ CQRS pattern for scalable command/query handling
-- ✅ Domain-Driven Design concepts
-- ✅ Repository and Unit of Work patterns
-- ✅ SOLID principles throughout
-
-**Technical Skills:**
-- ✅ .NET 8 / C# 12 proficiency
-- ✅ Entity Framework Core optimization
-- ✅ PostgreSQL database design
-- ✅ Redis caching strategies
-- ✅ Docker containerization
-- ✅ Kubernetes orchestration
-
-**DevOps & Testing:**
-- ✅ CI/CD with GitHub Actions
-- ✅ Automated testing (Unit + Integration + Load)
-- ✅ Infrastructure as Code
-- ✅ Monitoring & observability setup
-- ✅ Security best practices
-
-**Production Readiness:**
-- ✅ Performance optimized (9ms p95)
-- ✅ Security hardened (JWT, encryption, rate limiting)
-- ✅ Comprehensive error handling
-- ✅ Production deployment guides
-- ✅ Complete documentation
-
-### **Technical Metrics**
-
-- **Lines of Code:** ~15,000+
-- **Test Coverage:** Unit + Integration tests
-- **Performance:** p(95) < 10ms
-- **Security:** Multiple layers (auth, encryption, rate limiting)
-- **Scalability:** Redis cache, optimized queries, connection pooling
-- **Observability:** Prometheus + Grafana + Seq
-- **Documentation:** 6 comprehensive guides
-
----
-
-## 🚀 **Get Started Now!**
-
-```powershell
-# Clone and run in 60 seconds:
-git clone https://github.com/datngth03/banking-system-demo
-cd banking-system-demo
-docker-compose up -d
-
-# Open Swagger UI
-start http://localhost:5000/swagger
-
-# Run complete tests
-.\test-workflow.ps1
-```
-
-**Happy Coding! 🎉**
-
----
-
-**⭐ If you find this project helpful, please give it a star on GitHub! ⭐**
-
----
-
-*Built with ❤️ using .NET 8, Clean Architecture, and modern DevOps practices*  
-*Perfect for portfolio, learning, and production use*  
-*Last Updated: December 2025*
+**All documentation in `docs/` and `azure/` folders.**

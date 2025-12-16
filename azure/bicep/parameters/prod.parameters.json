@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.management.azure.com/schemas/2019-04-01/deploymentParameters.json#",
+  "contentVersion": "1.0.0.0",
+  "parameters": {
+    "environment": {
+      "value": "prod"
+    },
+    "location": {
+      "value": "southeastasia"
+    },
+    "baseName": {
+      "value": "banking"
+    },
+    "postgresAdminUsername": {
+      "value": "bankingadmin"
+    },
+    "postgresAdminPassword": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{rg-name}/providers/Microsoft.KeyVault/vaults/{kv-name}"
+        },
+        "secretName": "postgres-admin-password"
+      }
+    },
+    "jwtSecret": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{rg-name}/providers/Microsoft.KeyVault/vaults/{kv-name}"
+        },
+        "secretName": "jwt-secret"
+      }
+    },
+    "encryptionKey": {
+      "reference": {
+        "keyVault": {
+          "id": "/subscriptions/{subscription-id}/resourceGroups/{rg-name}/providers/Microsoft.KeyVault/vaults/{kv-name}"
+        },
+        "secretName": "encryption-key"
+      }
+    },
+    "containerRegistryName": {
+      "value": "bankingcrprod"
+    },
+    "apiImageTag": {
+      "value": "v1.0.0"
+    },
+    "minReplicas": {
+      "value": 2
+    },
+    "maxReplicas": {
+      "value": 10
+    },
+    "enableAppInsights": {
+      "value": true
+    },
+    "enableMonitoringStack": {
+      "value": true
+    }
+  }
+}

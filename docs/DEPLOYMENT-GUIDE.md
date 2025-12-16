@@ -179,6 +179,44 @@ kubectl autoscale deployment banking-api `
 
 ## ?? **AZURE DEPLOYMENT**
 
+> **?? For detailed Vietnamese guide, see:** [docs/AZURE-DEPLOYMENT-VI.md](./AZURE-DEPLOYMENT-VI.md)
+
+### **Quick Start: Automated Deployment with Bicep**
+
+The fastest way to deploy to Azure using Infrastructure as Code:
+
+```powershell
+# Deploy complete infrastructure to development
+.\azure\scripts\deploy.ps1 -Environment dev
+
+# Deploy to production with specific image tag
+.\azure\scripts\deploy.ps1 -Environment prod -ImageTag v1.0.0
+
+# Deploy only infrastructure (skip image build)
+.\azure\scripts\deploy.ps1 -Environment staging -SkipImageBuild
+
+# Deploy only new image (skip infrastructure)
+.\azure\scripts\deploy.ps1 -Environment prod -SkipInfrastructure -ImageTag v1.0.1
+```
+
+**What gets deployed:**
+- ? Azure Container Registry
+- ? PostgreSQL Flexible Servers (Business + Hangfire)
+- ? Azure Cache for Redis
+- ? Azure Key Vault (with secrets)
+- ? Log Analytics Workspace
+- ? Application Insights
+- ? Container Apps Environment
+- ? Banking API Container App
+
+**Deployment time:** ~15-20 minutes
+
+See [azure/scripts/README.md](../azure/scripts/README.md) for detailed script documentation.
+
+---
+
+### **Manual Deployment Options**
+
 ### **Option 1: Azure Container Apps (Recommended)**
 
 ```powershell
@@ -340,6 +378,91 @@ az keyvault set-policy `
   --object-id $principalId `
   --secret-permissions get list
 ```
+
+### **5. Azure Cache for Redis**
+
+```powershell
+# Create Redis Cache
+az redis create `
+  --resource-group rg-banking-prod `
+  --name banking-redis-prod `
+  --location eastus `
+  --sku Standard `
+  --vm-size C1 `
+  --enable-non-ssl-port false `
+  --minimum-tls-version 1.2
+
+# Get connection string
+$redisHost = az redis show `
+  --resource-group rg-banking-prod `
+  --name banking-redis-prod `
+  --query hostName -o tsv
+
+$redisKey = az redis list-keys `
+  --resource-group rg-banking-prod `
+  --name banking-redis-prod `
+  --query primaryKey -o tsv
+
+# Connection string format:
+# {redisHost}:6380,password={redisKey},ssl=True,abortConnect=False
+```
+
+**SKU Options:**
+- **Basic C0** ($16/month) - Development/Testing, 250MB
+- **Standard C1** ($62/month) - Production, 1GB with HA replication
+- **Premium P1** ($321/month) - Enterprise, 6GB with clustering
+
+---
+
+## ?? **AZURE COST ESTIMATION**
+
+### **Development Environment (~$93/month)**
+
+| Service | SKU | Cost/Month |
+|---------|-----|------------|
+| Container Apps | Consumption (2 replicas avg) | $25 |
+| PostgreSQL Business | Burstable B1ms | $12 |
+| PostgreSQL Hangfire | Burstable B1ms | $12 |
+| Redis Cache | Basic C0 | $16 |
+| Key Vault | Standard | $3 |
+| Container Registry | Standard | $20 |
+| Application Insights | Pay-as-you-go | $5 |
+| **Total** | | **~$93** |
+
+### **Production Environment (~$362/month)**
+
+| Service | SKU | Cost/Month |
+|---------|-----|------------|
+| Container Apps | Consumption (3 replicas avg) | $75 |
+| PostgreSQL Business | General Purpose D2s_v3 | $120 |
+| PostgreSQL Hangfire | Burstable B2s | $30 |
+| Redis Cache | Standard C1 | $62 |
+| Key Vault | Standard | $5 |
+| Container Registry | Standard | $20 |
+| Application Insights | Pay-as-you-go | $25 |
+| Log Analytics | Pay-as-you-go | $15 |
+| Backup & Storage | | $10 |
+| **Total** | | **~$362** |
+
+### **Cost Optimization Tips:**
+
+1. **Reserved Instances** - Save 30-50% on PostgreSQL with 1-3 year commitment
+2. **Auto-scaling** - Container Apps scale down when idle
+3. **Dev/Test Subscriptions** - Get discounted pricing for non-production
+4. **Delete unused environments** - Teardown dev/staging when not in use
+5. **Monitor costs** - Set budget alerts via Azure Cost Management
+
+```powershell
+# Set budget alert
+az consumption budget create `
+  --budget-name banking-monthly `
+  --amount 500 `
+  --resource-group rg-banking-prod `
+  --time-grain Monthly `
+  --start-date 2025-01-01
+```
+
+See [docs/AZURE-DEPLOYMENT-VI.md](./AZURE-DEPLOYMENT-VI.md) for detailed cost breakdown.
 
 ---
 
