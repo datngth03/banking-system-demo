@@ -24,7 +24,7 @@ RUN dotnet restore "BankingSystem.sln"
 COPY ["src/", "src/"]
 COPY ["tests/", "tests/"]
 
-# Build (without specifying output to keep default bin/obj structure)
+# Build (without 'v' prefix in version - NuGet requires SemVer format like 1.0.0, not v1.0)
 RUN dotnet build "BankingSystem.sln" \
     -c Release \
     --no-restore \

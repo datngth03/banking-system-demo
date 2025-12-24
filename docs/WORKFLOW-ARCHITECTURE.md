@@ -1,106 +1,87 @@
-﻿# 🔄 CI/CD WORKFLOW ARCHITECTURE
+﻿# CI/CD Workflow Architecture
 
-> Complete guide to the GitHub Actions workflows and automation pipeline
+Complete documentation for GitHub Actions automation pipelines.
 
 ---
 
-## 📊 **Overview**
+## Overview
 
-This project uses **2 main workflows** for complete CI/CD automation:
+The project implements a two-stage CI/CD pipeline using GitHub Actions:
 
 | Workflow | File | Purpose | Trigger |
 |----------|------|---------|---------|
-| **CI** | `.github/workflows/ci.yml` | Build, Test, Quality | Push, PR |
-| **CD** | `.github/workflows/cd.yml` | Docker Build, Deploy | CI Success, Tags |
+| **CI** | `.github/workflows/ci.yml` | Build, test, quality checks | Push, PR |
+| **CD** | `.github/workflows/cd.yml` | Docker build, deployment | CI success, tags |
 
-**Philosophy:** Separate concerns, clear dependencies, no duplication.
+**Architecture principle:** Separation of concerns with clear dependencies.
 
 ---
 
-## 🔨 **CI Workflow - Build & Test**
+## CI Workflow - Build & Test
 
-### **File:** `.github/workflows/ci.yml`
+**File:** `.github/workflows/ci.yml`
 
-### **Full Name:** "CI - Build and Test"
+### Triggers
 
-### **Triggers:**
 ```yaml
 on:
   push:
-    branches: [ main, develop ]
+    branches: [main, develop]
   pull_request:
-    branches: [ main, develop ]
-  workflow_dispatch:  # Manual trigger
+    branches: [main, develop]
+  workflow_dispatch:
 ```
 
-### **Architecture:**
+### Pipeline Architecture
 
 ```
-┌─────────────────────────────────────┐
-│   build-and-test (main job)        │
-│   - Setup .NET 8                    │
-│   - Start PostgreSQL service        │
-│   - Start Redis service             │
-│   - Restore dependencies            │
-│   - Build solution                  │
-│   - Run unit tests                  │
-│   - Run integration tests           │
-│   - Upload test results             │
-└──────────────┬──────────────────────┘
-               │
-      ┌────────┴────────┐
-      │                 │
-┌─────▼──────┐  ┌───────▼────────┐
-│code-analysis│  │ security-scan  │
-│(parallel)   │  │ (parallel)     │
-│- Code quality│  │- Trivy scan   │
-│- Analysis   │  │- Vulnerabilities│
-└─────────────┘  └────────────────┘
+build-and-test
+    ├─> code-analysis (parallel)
+    └─> security-scan (parallel)
 ```
 
-### **What It Does:**
+### Jobs
 
-#### **1. Build & Test Job**
-- ✅ Sets up .NET 8 SDK
-- ✅ Starts PostgreSQL 16 service (for integration tests)
-- ✅ Starts Redis service (for caching tests)
-- ✅ Restores NuGet packages
-- ✅ Builds entire solution
-- ✅ Runs unit tests (50+ tests)
-- ✅ Runs integration tests with real database
-- ✅ Generates test reports
-- ✅ Uploads artifacts (test results)
+**1. Build & Test**
+- .NET 8 SDK setup
+- PostgreSQL 16 service (integration tests)
+- Redis 7 service (caching tests)
+- NuGet package restoration
+- Solution build
+- Unit tests execution (50+ tests)
+- Integration tests with database
+- Test report generation
+- Artifact upload
 
-#### **2. Code Analysis Job** (parallel)
-- ✅ Static code analysis
-- ✅ Code quality metrics
-- ✅ Best practices validation
-- ✅ Uses: `dotnet build /p:AnalysisMode=AllEnabledByDefault`
+**2. Code Analysis** (runs in parallel)
+- Static code analysis
+- Quality metrics
+- Best practices validation
+- Command: `dotnet build /p:AnalysisMode=AllEnabledByDefault`
 
-#### **3. Security Scan Job** (parallel)
-- ✅ Trivy security scanner
-- ✅ Dependency vulnerability check
-- ✅ Package security audit
-- ✅ Uses: `dotnet list package --vulnerable`
+**3. Security Scan** (runs in parallel)
+- Trivy vulnerability scanner
+- Dependency audit
+- Package security check
+- Command: `dotnet list package --vulnerable`
 
-### **Duration:** ~5-7 minutes
+**Duration:** 5-7 minutes
 
-### **Output:**
-- ✅ Build success/failure
-- 📊 Test results (pass/fail counts)
-- 📈 Code quality report
-- 🔒 Security scan results
-- 📦 Test artifacts
+**Outputs:**
+- Build status
+- Test results
+- Code quality report
+- Security scan results
+- Test artifacts
 
 ---
 
-## 🚀 **CD Workflow - Deploy**
+## CD Workflow - Deployment
 
-### **File:** `.github/workflows/cd.yml`
+**File:** `.github/workflows/cd.yml`
 
-### **Full Name:** "CD - Build and Deploy"
+### Triggers
 
-### **Triggers:**
 ```yaml
 on:
   workflow_run:
@@ -109,286 +90,144 @@ on:
     branches: [main]
   
   push:
-    tags: ['v*.*.*']  # e.g., v1.0.0
+    tags: ['v*.*.*']
   
   workflow_dispatch:
 ```
 
-### **Architecture:**
+### Pipeline Architecture
 
 ```
-┌──────────────────────────┐
-│   check-ci-status        │
-│   - Verify CI passed     │
-│   - Fail if CI failed    │
-└───────────┬──────────────┘
-            │
-            ▼
-┌──────────────────────────┐
-│   build-docker-image     │
-│   - Build multi-arch     │
-│   - Tag with version     │
-│   - Push to registry     │
-└───────────┬──────────────┘
-            │
-            ▼
-┌──────────────────────────┐
-│   scan-docker-image      │
-│   - Trivy container scan │
-│   - Vulnerability check  │
-└───────────┬──────────────┘
-            │
-            ▼
-┌──────────────────────────┐
-│   deploy-staging         │
-│   - Deploy to staging    │
-│   - Health check         │
-└───────────┬──────────────┘
-            │
-            ▼ (if tag)
-┌──────────────────────────┐
-│   deploy-production      │
-│   - Requires approval    │
-│   - Deploy to production │
-│   - Create GitHub release│
-└──────────────────────────┘
+check-ci-status
+    ↓
+build-docker-image
+    ↓
+scan-docker-image
+    ↓
+deploy-production (on tag push)
 ```
 
-### **What It Does:**
+### Jobs
 
-#### **1. Check CI Status**
-- ✅ Verifies CI workflow passed
-- ✅ Fails fast if CI failed
-- ✅ Only continues on success
+**1. Check CI Status**
+- Verifies CI workflow passed
+- Fails pipeline if CI failed
+- Prevents deployment of broken builds
 
-#### **2. Build Docker Image**
-- ✅ Builds production Docker image
-- ✅ Multi-stage build (optimized)
-- ✅ Tags with version (from tag or SHA)
-- ✅ Pushes to container registry
-- ✅ Supports multi-architecture (amd64, arm64)
+**2. Build Docker Image**
+- Multi-stage Dockerfile build
+- Version tagging (tag or SHA)
+- Push to GitHub Container Registry (GHCR)
+- Build cache optimization
+- Multi-architecture support (amd64, arm64)
 
-#### **3. Scan Docker Image**
-- ✅ Trivy security scan
-- ✅ Checks for vulnerabilities
-- ✅ Reports critical issues
-- ✅ Fails on high severity
+**3. Scan Docker Image**
+- Trivy container security scan
+- Vulnerability detection (CRITICAL, HIGH)
+- SARIF report generation
+- Upload to GitHub Security tab
 
-#### **4. Deploy to Staging**
-- ✅ Automatic deployment
-- ✅ Uses latest image
-- ✅ Health check after deployment
-- ✅ Smoke tests
+**4. Deploy to Production** (conditional on version tags)
+- Triggered only by `v*.*.*` tags
+- Uses latest Docker image
+- Environment-based deployment
+- Health check verification
+- GitHub release creation
 
-#### **5. Deploy to Production** (conditional)
-- ✅ Only on version tags (v*.*.*)
-- ⚠️ Requires manual approval
-- ✅ Blue-green deployment
-- ✅ Rollback capability
-- ✅ Creates GitHub release
+**Duration:** 10-15 minutes
 
-### **Duration:** ~10-15 minutes (+ approval time)
-
-### **Output:**
-- 🐳 Docker image in registry
-- 🔒 Security scan report
-- 🚀 Staging deployment status
-- 📦 Production deployment (if approved)
-- 📋 GitHub release notes
+**Outputs:**
+- Docker image in GHCR
+- Security scan report
+- Deployment status
+- GitHub release (on tags)
 
 ---
 
-## 🔀 **Workflow Interactions**
+## Workflow Execution Scenarios
 
-### **Scenario 1: Push to `main` branch**
+### Scenario 1: Push to main branch
 
 ```
-┌──────────────┐
-│  git push    │
-│  origin main │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────────────┐
-│   CI Workflow        │ (5 min)
-│   - Build ✅         │
-│   - Test ✅          │
-│   - Quality ✅       │
-│   - Security ✅      │
-└──────┬───────────────┘
-       │ (on success)
-       ▼
-┌──────────────────────┐
-│   CD Workflow        │ (10 min)
-│   - Check CI ✅      │
-│   - Build Docker ✅  │
-│   - Scan Docker ✅   │
-│   - Deploy Staging ✅│
-└──────────────────────┘
+git push origin main
+    ↓
+CI Workflow (5 min)
+    ├─> Build
+    ├─> Test
+    ├─> Code Analysis
+    └─> Security Scan
+    ↓ (on success)
+CD Workflow (10 min)
+    ├─> Verify CI
+    ├─> Build Docker
+    ├─> Scan Image
+    └─> Deploy Production (if tag)
 
 Total: ~15 minutes
 ```
 
-### **Scenario 2: Push to `develop` branch**
+### Scenario 2: Push to develop branch
 
 ```
-┌──────────────┐
-│  git push    │
-│origin develop│
-└──────┬───────┘
-       │
-       ▼
-┌──────────────────────┐
-│   CI Workflow        │ (5 min)
-│   - Build ✅         │
-│   - Test ✅          │
-│   - Quality ✅       │
-│   - Security ✅      │
-└──────────────────────┘
+git push origin develop
+    ↓
+CI Workflow (5 min)
+    ├─> Build
+    ├─> Test
+    ├─> Code Analysis
+    └─> Security Scan
 
 CD does NOT run (branch filter)
-
 Total: ~5 minutes
 ```
 
-### **Scenario 3: Create Pull Request**
+### Scenario 3: Pull Request
 
 ```
-┌──────────────┐
-│  Create PR   │
-│  to main     │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────────────┐
-│   CI Workflow        │ (5 min)
-│   - Build ✅         │
-│   - Test ✅          │
-│   - Quality ✅       │
-│   - Security ✅      │
-│   ✅ Results in PR   │
-└──────────────────────┘
+Create PR to main
+    ↓
+CI Workflow (5 min)
+    ├─> Build
+    ├─> Test
+    ├─> Code Analysis
+    └─> Security Scan
+    ↓
+Results displayed in PR
 
-CD does NOT run (only on push)
-
+CD does NOT run
 Total: ~5 minutes
-Results shown in PR ✅
 ```
 
-### **Scenario 4: Tag Release (v1.0.0)**
+### Scenario 4: Release Tag
 
 ```
-┌──────────────┐
-│  git tag     │
-│  v1.0.0      │
-│  git push    │
-│  --tags      │
-└──────┬───────┘
-       │
-       ▼
-┌──────────────────────┐
-│   CI Workflow        │ (5 min)
-│   - Build ✅         │
-│   - Test ✅          │
-│   - Quality ✅       │
-│   - Security ✅      │
-└──────┬───────────────┘
-       │ (on success)
-       ▼
-┌──────────────────────┐
-│   CD Workflow        │ (10 min)
-│   - Check CI ✅      │
-│   - Build Docker ✅  │
-│     (tag: v1.0.0)    │
-│   - Scan Docker ✅   │
-│   - Deploy Staging ✅│
-│   - ⏸️  WAIT FOR     │
-│     APPROVAL         │
-└──────┬───────────────┘
-       │ (after approval)
-       ▼
-┌──────────────────────┐
-│   Production Deploy  │ (5 min)
-│   - Deploy Prod ✅   │
-│   - Health Check ✅  │
-│   - Create Release ✅│
-└──────────────────────┘
+git tag v1.0.0 && git push --tags
+    ↓
+CI Workflow (5 min)
+    └─> Full test suite
+    ↓ (on success)
+CD Workflow (10 min)
+    ├─> Build Docker (tagged v1.0.0)
+    ├─> Security Scan
+    └─> Deploy Production
+    ↓
+GitHub Release Created
 
-Total: ~20 min + approval time
+Total: ~15 minutes
 ```
 
 ---
 
-## 📋 **Workflow Comparison**
+## Service Configuration
 
-### **Current Structure (Active):**
-
-| Feature | CI Workflow | CD Workflow |
-|---------|------------|-------------|
-| **Trigger** | Push, PR | CI Success, Tags |
-| **Services** | PostgreSQL, Redis | None |
-| **Build** | ✅ .NET Build | ✅ Docker Build |
-| **Tests** | ✅ Unit + Integration | ❌ |
-| **Code Quality** | ✅ Analysis | ❌ |
-| **Security** | ✅ Trivy + NuGet | ✅ Trivy Docker |
-| **Deploy** | ❌ | ✅ Staging + Prod |
-| **Duration** | ~5-7 min | ~10-15 min |
-| **Dependencies** | None | Requires CI pass |
-
-### **Removed Workflows:**
-
-#### **1. `ci-cd.yml` (REMOVED ❌)**
-
-**Reasons for removal:**
-- ❌ No database services (tests would fail)
-- ❌ Duplicated effort with ci.yml
-- ❌ Mixed concerns (CI + CD in one)
-- ❌ Less comprehensive testing
-- ❌ Potential conflicts
-
-**Better approach:** Separate CI and CD workflows.
-
-#### **2. `code-quality.yml` (REMOVED ❌)**
-
-**Reasons for removal:**
-- ❌ Duplicated code analysis (already in ci.yml)
-- ❌ Duplicated build & test steps
-- ❌ Required SonarCloud token (not configured)
-- ❌ Scheduled runs not essential
-
-**What we kept:**
-- ✅ Code analysis in ci.yml
-- ✅ Security scanning in both workflows
-- ✅ Dependency vulnerability check
-
-**What was lost (can add back if needed):**
-- ⚠️ SonarCloud integration
-- ⚠️ Weekly scheduled runs
-- ⚠️ License compliance check
-
----
-
-## 🔧 **Configuration**
-
-### **Environment Variables**
-
-Both workflows use these secrets:
-
-```yaml
-secrets:
-  DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-  DOCKER_PASSWORD: ${{ secrets.DOCKER_PASSWORD }}
-  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}  # Auto-provided
-```
-
-### **Service Configuration (CI only)**
+**CI Workflow Services** (PostgreSQL + Redis for testing)
 
 ```yaml
 services:
   postgres:
-    image: postgres:16
+    image: postgres:16-alpine
     env:
-      POSTGRES_DB: BankingSystemTest
+      POSTGRES_DB: BankingSystemDb
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: postgres123
     ports:
@@ -412,272 +251,250 @@ services:
 
 ---
 
-## 🎯 **Best Practices**
+## Environment Variables & Secrets
 
-### **1. Separation of Concerns**
-```
-✅ CI: Build, test, quality checks
-✅ CD: Docker, deployment
-❌ Don't mix CI and CD in one workflow
-```
+**Required GitHub Secrets:**
 
-### **2. Clear Dependencies**
 ```yaml
-# CD depends on CI
+secrets:
+  GITHUB_TOKEN              # Auto-provided by GitHub
+  DB_CONNECTION_PRODUCTION  # PostgreSQL connection string
+  JWT_SECRET_PRODUCTION     # JWT signing key
+  ENCRYPTION_KEY_PRODUCTION # Data encryption key
+```
+
+**Environment Variables:**
+
+```yaml
+env:
+  DOTNET_VERSION: '8.0.x'
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}/banking-api
+```
+
+---
+
+## Deployment Strategy
+
+### Version Tagging
+
+```bash
+# Semantic versioning
+git tag v1.0.0    # Major.Minor.Patch
+git tag v1.0.1    # Patch release
+git tag v1.1.0    # Minor release
+git tag v2.0.0    # Major release
+
+git push origin --tags
+```
+
+### Image Tagging Strategy
+
+```yaml
+tags: |
+  type=ref,event=branch           # main, develop
+  type=semver,pattern={{version}} # 1.0.0
+  type=semver,pattern={{major}}.{{minor}} # 1.0
+  type=sha,prefix={{branch}}-     # main-abc1234
+  type=raw,value=latest,enable={{is_default_branch}}
+```
+
+**Examples:**
+- `ghcr.io/user/banking-api:main`
+- `ghcr.io/user/banking-api:1.0.0`
+- `ghcr.io/user/banking-api:1.0`
+- `ghcr.io/user/banking-api:main-abc1234`
+- `ghcr.io/user/banking-api:latest`
+
+---
+
+## Security Features
+
+### CI Pipeline Security
+
+- Dependency vulnerability scanning
+- Package audit (`dotnet list package --vulnerable`)
+- Trivy filesystem scan
+- SARIF report upload to GitHub Security
+
+### CD Pipeline Security
+
+- Docker image vulnerability scan (Trivy)
+- Multi-stage builds (minimal attack surface)
+- No secrets in images
+- Distroless base images
+- SBOM generation (Software Bill of Materials)
+
+---
+
+## Best Practices
+
+### 1. Fail Fast
+```yaml
+# CD checks CI status first
+if: github.event.workflow_run.conclusion == 'success'
+```
+
+### 2. Parallel Execution
+```yaml
+# Code analysis and security scan run in parallel
+needs: build-and-test
+```
+
+### 3. Conditional Deployment
+```yaml
+# Production only on version tags
+if: startsWith(github.ref, 'refs/tags/v')
+```
+
+### 4. Cache Optimization
+```yaml
+cache-from: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
+cache-to: type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+```
+
+### 5. Dependency Management
+```yaml
+# CD depends on CI success
 on:
   workflow_run:
     workflows: ["CI - Build and Test"]
     types: [completed]
-    branches: [main]
-```
-
-### **3. Fail Fast**
-```yaml
-# Check CI status first
-if: ${{ github.event.workflow_run.conclusion == 'success' }}
-```
-
-### **4. Conditional Execution**
-```yaml
-# Only deploy to prod on tags
-if: startsWith(github.ref, 'refs/tags/v')
-```
-
-### **5. Parallel Jobs**
-```yaml
-# Run code-analysis and security-scan in parallel
-needs: build-and-test
 ```
 
 ---
 
-## 👨‍💻 **Developer Workflow**
+## Developer Workflow
 
-### **Daily Development:**
+### Daily Development
 
 ```bash
-# 1. Create feature branch
+# Create feature branch
 git checkout -b feature/new-feature
 
-# 2. Make changes
-# ... code ...
-
-# 3. Commit and push
+# Make changes and commit
 git add .
-git commit -m "feat: add new feature"
+git commit -m "feat: implement new feature"
+
+# Push and create PR
 git push origin feature/new-feature
+# CI runs automatically on PR
 
-# 4. Create Pull Request on GitHub
-# ✅ CI runs automatically (5 min)
-# ✅ See results in PR checks
-
-# 5. Review and merge
-# ✅ CI runs on main (5 min)
-# ✅ CD runs after CI (10 min)
-# ✅ Deployed to staging
+# After review, merge to main
+# CI + CD run automatically
 ```
 
-### **Release Process:**
+### Release Process
 
 ```bash
-# 1. Ensure main is stable
+# Ensure main branch is stable
 git checkout main
-git pull
+git pull origin main
 
-# 2. Create and push tag
+# Create version tag
 git tag v1.0.0
 git push origin v1.0.0
 
-# 3. Workflows run automatically
-# ✅ CI runs (5 min)
-# ✅ CD runs (10 min)
-# ✅ Staging deployed
-# ⏸️  Awaits approval for production
-
-# 4. Approve in GitHub Actions
-# (Click "Review deployments" button)
-
-# 5. Production deployed
-# ✅ Docker image: v1.0.0
-# ✅ GitHub release created
-# ✅ Release notes generated
+# Workflows run automatically:
+# 1. CI builds and tests
+# 2. CD builds Docker image
+# 3. CD deploys to production
+# 4. GitHub release created
 ```
 
 ---
 
-## 🔍 **Monitoring Workflows**
+## Monitoring & Observability
 
-### **GitHub UI:**
+### GitHub Actions UI
+
 - **Actions Tab:** View all workflow runs
-- **PR Checks:** See CI results in PR
-- **Deployments:** Track staging/production
-- **Releases:** View created releases
+- **Pull Requests:** CI status checks
+- **Security Tab:** Vulnerability reports
+- **Releases:** Published versions
 
-### **Status Badges:**
+### Status Badges
 
-Add to README.md:
 ```markdown
-[![CI](https://github.com/datngth03/banking-system-demo/actions/workflows/ci.yml/badge.svg)](https://github.com/datngth03/banking-system-demo/actions/workflows/ci.yml)
-
-[![CD](https://github.com/datngth03/banking-system-demo/actions/workflows/cd.yml/badge.svg)](https://github.com/datngth03/banking-system-demo/actions/workflows/cd.yml)
-```
-
-### **Notifications:**
-- Email on workflow failure
-- Slack integration (optional)
-- Discord webhooks (optional)
-
----
-
-## 🐛 **Troubleshooting**
-
-### **CI Fails:**
-
-**Problem:** Tests fail
-```yaml
-Solution:
-1. Check test logs in workflow output
-2. Run locally: dotnet test
-3. Ensure PostgreSQL/Redis are healthy
-4. Check connection strings
-```
-
-**Problem:** Build fails
-```yaml
-Solution:
-1. Check compiler errors
-2. Run locally: dotnet build
-3. Ensure dependencies restored
-4. Check .NET version (8.0)
-```
-
-### **CD Fails:**
-
-**Problem:** Docker build fails
-```yaml
-Solution:
-1. Check Dockerfile syntax
-2. Ensure all files copied
-3. Test locally: docker build .
-4. Check multi-stage build
-```
-
-**Problem:** Deployment fails
-```yaml
-Solution:
-1. Check deployment scripts
-2. Verify credentials
-3. Check environment variables
-4. Review deployment logs
+[![CI](https://github.com/USER/REPO/actions/workflows/ci.yml/badge.svg)](https://github.com/USER/REPO/actions/workflows/ci.yml)
+[![CD](https://github.com/USER/REPO/actions/workflows/cd.yml/badge.svg)](https://github.com/USER/REPO/actions/workflows/cd.yml)
 ```
 
 ---
 
-## 🚀 **Future Enhancements**
+## Troubleshooting
 
-### **Optional Additions:**
+### CI Failures
 
-#### **1. SonarCloud Integration**
-```yaml
-# Add to ci.yml
-- name: SonarCloud Scan
-  uses: SonarSource/sonarcloud-github-action@master
-  env:
-    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+**Tests Fail**
+```bash
+# Run locally
+dotnet test
+
+# Check service health
+docker ps
+docker logs <postgres_container>
 ```
 
-#### **2. Automated Rollback**
-```yaml
-# Add to cd.yml
-- name: Rollback on Failure
-  if: failure()
-  run: |
-    kubectl rollout undo deployment/banking-api
+**Build Fails**
+```bash
+# Restore and build locally
+dotnet restore
+dotnet build --configuration Release
 ```
 
-#### **3. Performance Testing**
-```yaml
-# Add job to ci.yml
-performance-test:
-  runs-on: ubuntu-latest
-  steps:
-    - name: Run k6 Load Test
-      run: k6 run performance-tests/load-test.js
+### CD Failures
+
+**Docker Build Fails**
+```bash
+# Test locally
+docker build -t test -f src/BankingSystem.API/Dockerfile .
+
+# Check Dockerfile syntax
+docker build --no-cache -t test .
 ```
 
-#### **4. Database Migration Check**
-```yaml
-# Add to ci.yml
-- name: Check Migrations
-  run: |
-    dotnet ef migrations has-pending-model-changes
+**Deployment Fails**
+```bash
+# Check logs in GitHub Actions
+# Verify secrets are set correctly
+# Ensure target environment is accessible
 ```
 
 ---
 
-## 📊 **Metrics & Analytics**
-
-### **Track These Metrics:**
+## Performance Metrics
 
 | Metric | Target | Current |
 |--------|--------|---------|
-| **Build Time** | < 5 min | ~3-4 min |
-| **Test Coverage** | > 80% | ~85% |
-| **CI Success Rate** | > 95% | ~98% |
-| **CD Success Rate** | > 90% | ~95% |
-| **Deploy Frequency** | Daily | As needed |
-| **Mean Time to Deploy** | < 20 min | ~15 min |
+| CI Duration | < 10 min | ~5-7 min |
+| CD Duration | < 20 min | ~10-15 min |
+| CI Success Rate | > 95% | ~98% |
+| Test Coverage | > 80% | ~85% |
+| Image Build Time | < 5 min | ~3-4 min |
 
 ---
 
-## ✅ **Summary**
+## Future Enhancements
 
-### **Current Workflow Architecture:**
+**Potential Additions:**
 
-```
-📋 Two Workflows:
-   ├── ci.yml - Comprehensive CI
-   │   ├── Build & Test
-   │   ├── Code Analysis (parallel)
-   │   └── Security Scan (parallel)
-   │
-   └── cd.yml - Deployment Pipeline
-       ├── Check CI Status
-       ├── Build Docker
-       ├── Scan Docker
-       ├── Deploy Staging
-       └── Deploy Production (on tags)
-
-🔄 Flow:
-   Push → CI → (success) → CD → Deploy
-
-⏱️ Duration:
-   CI: ~5-7 min
-   CD: ~10-15 min
-   Total: ~15-22 min
-
-✨ Benefits:
-   ✅ Clear separation
-   ✅ No duplication
-   ✅ Parallel execution
-   ✅ Safe deployments
-   ✅ Easy to maintain
-```
+- SonarCloud integration for code quality
+- Automated rollback on deployment failure
+- Performance testing with k6
+- Database migration validation
+- Slack/Discord notifications
+- Multi-region deployment support
 
 ---
 
-**📚 Related Documentation:**
+## Related Documentation
+
 - CI Configuration: `.github/workflows/ci.yml`
 - CD Configuration: `.github/workflows/cd.yml`
-- Deployment Guide: `docs/DEPLOYMENT-GUIDE.md`
-- Testing Guide: `docs/TESTING-GUIDE.md`
-
-**🔗 Useful Links:**
-- [GitHub Actions Docs](https://docs.github.com/en/actions)
-- [Workflow Syntax](https://docs.github.com/en/actions/using-workflows/workflow-syntax-for-github-actions)
-- [Security Hardening](https://docs.github.com/en/actions/security-guides)
+- Azure Deployment: `docs/AZURE-DEPLOYMENT.md`
+- Main README: `README.md`
 
 ---
 
-*Last Updated: 2025-12-08*  
-*Maintained by: Dat Nguyen (@datngth03)*
+**Last Updated:** December 2025

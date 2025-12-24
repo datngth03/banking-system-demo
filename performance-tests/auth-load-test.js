@@ -3,19 +3,19 @@ import { check, sleep } from 'k6';
 
 export let options = {
     stages: [
-        { duration: '30s', target: 5 },  // Ramp up slowly
-        { duration: '1m', target: 10 },  // Stay at 10 users
-        { duration: '30s', target: 0 },  // Ramp down
+        { duration: '30s', target: 5 },
+        { duration: '1m', target: 10 },
+        { duration: '30s', target: 0 },
     ],
     thresholds: {
-        http_req_duration: ['p(95)<1000'], // More lenient for auth
-        http_req_failed: ['rate<0.2'],     // 20% error tolerance
+        http_req_duration: ['p(95)<1000'], // More lenient for auth operations
+        http_req_failed: ['rate<0.2'],     // 20% error tolerance (rate limiting expected)
     },
 };
 
 const BASE_URL = __ENV.BASE_URL || 'http://localhost:5000';
 
-// Test user credentials (need to be seeded in database)
+// Test user credentials (must be seeded via test-workflow.ps1)
 const TEST_USERS = [
     { email: 'admin@bankingsystem.com', password: 'Secure!2025$Bank#Mgr' },
     { email: 'user1@test.com', password: 'Verify!2025$Safe#U1' },
@@ -23,10 +23,10 @@ const TEST_USERS = [
 ];
 
 export default function () {
-    // Pick random user
+    // Select random user
     const user = TEST_USERS[Math.floor(Math.random() * TEST_USERS.length)];
 
-    // Test Login
+    // Login
     let loginPayload = JSON.stringify({
         email: user.email,
         password: user.password
@@ -51,7 +51,7 @@ export default function () {
             if (token) {
                 // Test authenticated endpoints
 
-                // Get user profile
+                // User profile
                 let profileResponse = http.get(`${BASE_URL}/api/users/profile`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -63,7 +63,7 @@ export default function () {
                     'profile response time < 500ms': (r) => r.timings.duration < 500,
                 });
 
-                // Get accounts
+                // Accounts
                 let accountsResponse = http.get(`${BASE_URL}/api/accounts`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,
@@ -75,7 +75,7 @@ export default function () {
                     'accounts response time < 500ms': (r) => r.timings.duration < 500,
                 });
 
-                // Get cards
+                // Cards
                 let cardsResponse = http.get(`${BASE_URL}/api/cards`, {
                     headers: {
                         'Authorization': `Bearer ${token}`,

@@ -82,14 +82,16 @@ resource containerApp 'Microsoft.App/containerApps@2023-05-01' = {
         ]
         transport: 'auto'
       }
-      registries: [
+      // Only add registries if containerRegistryServer is provided
+      registries: empty(containerRegistryServer) ? [] : [
         {
           server: containerRegistryServer
           username: containerRegistryUsername
           passwordSecretRef: 'container-registry-password'
         }
       ]
-      secrets: concat([
+      // Only add container-registry-password secret if registry is provided
+      secrets: empty(containerRegistryServer) ? secrets : concat([
         {
           name: 'container-registry-password'
           value: containerRegistryPassword

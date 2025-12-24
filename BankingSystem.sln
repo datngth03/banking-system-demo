@@ -25,20 +25,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution 
 		.env = .env
 		.env.example = .env.example
 		.gitignore = .gitignore
-		CV-NguyenThanhDat-SoftwareEngineer.md = CV-NguyenThanhDat-SoftwareEngineer.md
-		docker-compose.ci.yml = docker-compose.ci.yml
-		docker-compose.production.yml = docker-compose.production.yml
 		docker-compose.yml = docker-compose.yml
 		README.md = README.md
-		test-workflow.ps1 = test-workflow.ps1
 	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "docs", "docs", "{AF877FE9-4D5E-4043-8FF7-43A7322CB8FA}"
 	ProjectSection(SolutionItems) = preProject
-		docs\DEPLOYMENT-GUIDE.md = docs\DEPLOYMENT-GUIDE.md
-		docs\MONITORING-GUIDE.md = docs\MONITORING-GUIDE.md
-		docs\RATE-LIMITING-CONFIG.md = docs\RATE-LIMITING-CONFIG.md
-		docs\SECRETS-MANAGEMENT.md = docs\SECRETS-MANAGEMENT.md
+		docs\AZURE-DEPLOYMENT.md = docs\AZURE-DEPLOYMENT.md
 		docs\WORKFLOW-ARCHITECTURE.md = docs\WORKFLOW-ARCHITECTURE.md
 	EndProjectSection
 EndProject
@@ -95,6 +88,47 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "performance-tests", "perfor
 		performance-tests\auth-load-test.js = performance-tests\auth-load-test.js
 		performance-tests\load-test.js = performance-tests\load-test.js
 		performance-tests\README.md = performance-tests\README.md
+		performance-tests\test-workflow.ps1 = performance-tests\test-workflow.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "azure", "azure", "{ED7A1852-1A34-46BD-A9F9-039F53BCA062}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "appsettings", "appsettings", "{2A32A2B0-BD68-4500-BC58-64CFF38B4A03}"
+	ProjectSection(SolutionItems) = preProject
+		azure\appsettings\appsettings.Azure.Development.json = azure\appsettings\appsettings.Azure.Development.json
+		azure\appsettings\appsettings.Azure.Production.json = azure\appsettings\appsettings.Azure.Production.json
+		azure\appsettings\README.md = azure\appsettings\README.md
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "bicep", "bicep", "{91E01EFE-E203-4701-A3BB-EF4670F64785}"
+	ProjectSection(SolutionItems) = preProject
+		azure\bicep\main.bicep = azure\bicep\main.bicep
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "scripts", "scripts", "{E95B80DC-1A22-491A-996C-53427F48A56F}"
+	ProjectSection(SolutionItems) = preProject
+		azure\scripts\cleanup.ps1 = azure\scripts\cleanup.ps1
+		azure\scripts\deploy.ps1 = azure\scripts\deploy.ps1
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "modules", "modules", "{008B33FC-11B0-470C-BDFC-A921C49898C5}"
+	ProjectSection(SolutionItems) = preProject
+		azure\bicep\modules\app-insights.bicep = azure\bicep\modules\app-insights.bicep
+		azure\bicep\modules\container-app.bicep = azure\bicep\modules\container-app.bicep
+		azure\bicep\modules\container-apps-env.bicep = azure\bicep\modules\container-apps-env.bicep
+		azure\bicep\modules\container-registry.bicep = azure\bicep\modules\container-registry.bicep
+		azure\bicep\modules\keyvault-access.bicep = azure\bicep\modules\keyvault-access.bicep
+		azure\bicep\modules\keyvault-secrets.bicep = azure\bicep\modules\keyvault-secrets.bicep
+		azure\bicep\modules\keyvault.bicep = azure\bicep\modules\keyvault.bicep
+		azure\bicep\modules\log-analytics.bicep = azure\bicep\modules\log-analytics.bicep
+		azure\bicep\modules\postgresql.bicep = azure\bicep\modules\postgresql.bicep
+		azure\bicep\modules\redis.bicep = azure\bicep\modules\redis.bicep
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "parameters", "parameters", "{D62BF1FC-68D7-43A3-BD33-5B0410804445}"
+	ProjectSection(SolutionItems) = preProject
+		azure\bicep\parameters\dev.parameters.json = azure\bicep\parameters\dev.parameters.json
+		azure\bicep\parameters\prod.parameters.json = azure\bicep\parameters\prod.parameters.json
 	EndProjectSection
 EndProject
 Global
@@ -145,6 +179,11 @@ Global
 		{67095505-CE81-4027-BB80-7C6B7BDDF0AF} = {6DCFAFAD-85CB-49EF-9035-A3569ABDB8D6}
 		{625273A7-34B3-4EB8-9B7D-D2C9801BF6AD} = {6DCFAFAD-85CB-49EF-9035-A3569ABDB8D6}
 		{7F039B7B-3986-4346-9031-1710E6AB09F4} = {36EABF40-20B9-40A8-BD20-8B5AAC1A8F0B}
+		{2A32A2B0-BD68-4500-BC58-64CFF38B4A03} = {ED7A1852-1A34-46BD-A9F9-039F53BCA062}
+		{91E01EFE-E203-4701-A3BB-EF4670F64785} = {ED7A1852-1A34-46BD-A9F9-039F53BCA062}
+		{E95B80DC-1A22-491A-996C-53427F48A56F} = {ED7A1852-1A34-46BD-A9F9-039F53BCA062}
+		{008B33FC-11B0-470C-BDFC-A921C49898C5} = {91E01EFE-E203-4701-A3BB-EF4670F64785}
+		{D62BF1FC-68D7-43A3-BD33-5B0410804445} = {91E01EFE-E203-4701-A3BB-EF4670F64785}
 	EndGlobalSection
 	GlobalSection(ExtensibilityGlobals) = postSolution
 		SolutionGuid = {D557F54A-E325-4878-8875-AFC3F188EC5E}

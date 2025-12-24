@@ -1,330 +1,701 @@
 # ============================================================================
-# Banking System - Azure Deployment Script
-# Deploys complete infrastructure to Azure using Bicep templates
+# Complete Banking System Deployment
+# All-in-one script: Infrastructure + Application + Password Sync
 # ============================================================================
 
+#Requires -Version 7.0
+
+[CmdletBinding()]
 param(
-    [Parameter(Mandatory=$true)]
-    [ValidateSet('dev', 'staging', 'prod')]
-    [string]$Environment,
+    [Parameter(Mandatory=$true, HelpMessage="Docker Hub username for image repository")]
+    [ValidateNotNullOrEmpty()]
+    [string]$DockerHubUsername,
     
-    [Parameter(Mandatory=$false)]
-    [string]$ResourceGroupName = "rg-banking-$Environment",
+    [Parameter(Mandatory=$false, HelpMessage="Deployment mode: infrastructure, app, or all")]
+    [ValidateSet('infrastructure', 'app', 'all')]
+    [string]$DeployMode = "all",
     
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false, HelpMessage="Environment name (dev, staging, prod)")]
+    [ValidatePattern('^[a-z0-9-]+$')]
+    [string]$Environment = "dev",
+    
+    [Parameter(Mandatory=$false, HelpMessage="Docker image tag version")]
+    [string]$ImageTag = "1.0.0",
+    
+    [Parameter(Mandatory=$false, HelpMessage="Azure resource group name")]
+    [string]$ResourceGroup = "rg-banking-$Environment",
+    
+    [Parameter(Mandatory=$false, HelpMessage="Azure region location")]
     [string]$Location = "southeastasia",
     
-    [Parameter(Mandatory=$false)]
-    [string]$SubscriptionId,
+    [Parameter(Mandatory=$false, HelpMessage="Container App name")]
+    [string]$ContainerAppName = "banking-$Environment-api",
     
-    [Parameter(Mandatory=$false)]
-    [switch]$SkipInfrastructure,
-    
-    [Parameter(Mandatory=$false)]
+    [Parameter(Mandatory=$false, HelpMessage="Skip Docker image build")]
     [switch]$SkipImageBuild,
     
-    [Parameter(Mandatory=$false)]
-    [string]$ImageTag = "latest"
+    [Parameter(Mandatory=$false, HelpMessage="Use existing password instead of generating new one")]
+    [switch]$UseExistingPassword,
+    
+    [Parameter(Mandatory=$false, HelpMessage="Existing PostgreSQL password")]
+    [string]$ExistingPassword = ""
 )
 
-# ============================================================================
-# CONFIGURATION
-# ============================================================================
-
 $ErrorActionPreference = "Stop"
-$InformationPreference = "Continue"
-
-$scriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
-$rootPath = Split-Path -Parent (Split-Path -Parent $scriptPath)
-$bicepPath = Join-Path $scriptPath "..\bicep"
-$parametersFile = Join-Path $bicepPath "parameters\$Environment.parameters.json"
-
-Write-Host "============================================" -ForegroundColor Cyan
-Write-Host "  Banking System Azure Deployment" -ForegroundColor Cyan
-Write-Host "  Environment: $Environment" -ForegroundColor Cyan
-Write-Host "============================================" -ForegroundColor Cyan
-Write-Host ""
+$ProgressPreference = "SilentlyContinue"
 
 # ============================================================================
-# FUNCTIONS
+# CONSTANTS AND CONFIGURATION
 # ============================================================================
 
-function Test-AzureCLI {
-    Write-Information "Checking Azure CLI installation..."
-    
-    try {
-        $azVersion = az version | ConvertFrom-Json
-        Write-Information "? Azure CLI version: $($azVersion.'azure-cli')"
-    }
-    catch {
-        Write-Error "Azure CLI is not installed. Please install from: https://aka.ms/installazurecli"
-        exit 1
+$script:Config = @{
+    ImageRepository = "banking-api"
+    DatabaseName = "BankingSystemDb"
+    DatabaseUsername = "bankingadmin"
+    PasswordLength = 32
+    HealthCheckTimeout = 10
+    RestartWaitTime = 30
+    ProviderNamespace = "Microsoft.App"
+    Tags = @{
+        Environment = $Environment
+        Project = "BankingSystem"
     }
 }
 
-function Connect-AzureSubscription {
-    Write-Information "Connecting to Azure..."
-    
-    # Check if already logged in
-    $account = az account show 2>$null | ConvertFrom-Json
-    
-    if (-not $account) {
-        Write-Information "Not logged in. Initiating login..."
-        az login
-    }
-    else {
-        Write-Information "? Already logged in as: $($account.user.name)"
-    }
-    
-    # Set subscription if specified
-    if ($SubscriptionId) {
-        Write-Information "Setting subscription to: $SubscriptionId"
-        az account set --subscription $SubscriptionId
-    }
-    
-    $currentSubscription = az account show | ConvertFrom-Json
-    Write-Information "? Using subscription: $($currentSubscription.name) ($($currentSubscription.id))"
-    
-    return $currentSubscription.id
+$script:Paths = @{
+    ScriptPath = Split-Path -Parent $MyInvocation.MyCommand.Path
+    RootPath = Split-Path -Parent (Split-Path -Parent (Split-Path -Parent $MyInvocation.MyCommand.Path))
 }
+$script:Paths.DockerfilePath = Join-Path $script:Paths.RootPath "src\BankingSystem.API\Dockerfile"
 
-function New-ResourceGroupIfNotExists {
+# ============================================================================
+# HELPER FUNCTIONS
+# ============================================================================
+
+function Write-Banner {
     param(
-        [string]$Name,
-        [string]$Location
+        [string]$Title,
+        [ConsoleColor]$Color = 'Cyan',
+        [int]$Width = 44
     )
     
-    Write-Information "Checking resource group: $Name"
+    $separator = "=" * $Width
+    Write-Host ""
+    Write-Host $separator -ForegroundColor $Color
+    Write-Host "  $Title" -ForegroundColor $Color
+    Write-Host $separator -ForegroundColor $Color
+    Write-Host ""
+}
+
+function Write-Step {
+    param(
+        [string]$Message,
+        [ConsoleColor]$Color = 'Cyan'
+    )
+    Write-Host $Message -ForegroundColor $Color
+}
+
+function Write-Success {
+    param([string]$Message)
+    Write-Host "? $Message" -ForegroundColor Green
+}
+
+function Write-Warning {
+    param([string]$Message)
+    Write-Host "??  $Message" -ForegroundColor Yellow
+}
+
+function Write-Info {
+    param(
+        [string]$Label,
+        [string]$Value,
+        [ConsoleColor]$Color = 'White'
+    )
+    Write-Host "  ${Label}: " -NoNewline -ForegroundColor Gray
+    Write-Host $Value -ForegroundColor $Color
+}
+
+function Test-CommandExists {
+    param([string]$Command)
     
-    $rgExists = az group exists --name $Name | ConvertFrom-Json
+    $null = Get-Command $Command -ErrorAction SilentlyContinue
+    return $?
+}
+
+function Invoke-AzCommand {
+    param(
+        [string]$Description,
+        [scriptblock]$Command
+    )
     
-    if (-not $rgExists) {
-        Write-Information "Creating resource group: $Name in $Location"
-        az group create `
-            --name $Name `
-            --location $Location `
-            --tags Environment=$Environment Project=BankingSystem ManagedBy=Bicep
-        
-        Write-Information "? Resource group created"
+    Write-Step $Description
+    
+    try {
+        $result = & $Command
+        if ($LASTEXITCODE -ne 0) {
+            throw "Command failed with exit code: $LASTEXITCODE"
+        }
+        return $result
     }
-    else {
-        Write-Information "? Resource group already exists"
+    catch {
+        Write-Error "Failed to execute: $Description. Error: $($_.Exception.Message)"
+        throw
     }
 }
 
-function New-DeploymentSecrets {
-    Write-Information "Generating deployment secrets..."
+function New-SecurePassword {
+    param([int]$Length = 32)
     
-    # Generate secrets if not already set
-    $secrets = @{
-        postgresAdminPassword = -join ((65..90) + (97..122) + (48..57) + 33,35,36,37,38,42 | Get-Random -Count 24 | ForEach-Object {[char]$_})
-        jwtSecret = -join ((65..90) + (97..122) + (48..57) | Get-Random -Count 64 | ForEach-Object {[char]$_})
-        encryptionKey = [Convert]::ToBase64String((1..32 | ForEach-Object { Get-Random -Minimum 0 -Maximum 256 }))
+    $chars = (65..90) + (97..122) + (48..57)
+    $password = -join ($chars | Get-Random -Count $Length | ForEach-Object { [char]$_ })
+    return $password
+}
+
+function Save-DeploymentSecrets {
+    param(
+        [string]$Password,
+        [string]$JwtSecret = "",
+        [string]$EncryptionKey = "",
+        [string]$Environment
+    )
+    
+    $timestamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $secretsFile = Join-Path $script:Paths.RootPath "deployment-secrets-$timestamp.txt"
+    
+    $secretsContent = @"
+============================================
+BANKING SYSTEM DEPLOYMENT SECRETS
+============================================
+Generated: $(Get-Date -Format 'yyyy-MM-dd HH:mm:ss')
+Environment: $Environment
+============================================
+
+PostgreSQL Admin Username: $($script:Config.DatabaseUsername)
+PostgreSQL Admin Password: $Password
+
+"@
+    
+    # Add JWT Secret if provided
+    if (-not [string]::IsNullOrEmpty($JwtSecret)) {
+        $secretsContent += @"
+JWT Secret: $JwtSecret
+
+"@
     }
     
-    Write-Host ""
-    Write-Host "?? GENERATED SECRETS (SAVE THESE SECURELY!):" -ForegroundColor Yellow
-    Write-Host "============================================" -ForegroundColor Yellow
-    Write-Host "Postgres Admin Password: $($secrets.postgresAdminPassword)" -ForegroundColor Yellow
-    Write-Host "JWT Secret: $($secrets.jwtSecret)" -ForegroundColor Yellow
-    Write-Host "Encryption Key: $($secrets.encryptionKey)" -ForegroundColor Yellow
-    Write-Host "============================================" -ForegroundColor Yellow
+    # Add Encryption Key if provided
+    if (-not [string]::IsNullOrEmpty($EncryptionKey)) {
+        $secretsContent += @"
+Encryption Key: $EncryptionKey
+
+"@
+    }
+    
+    $secretsContent += @"
+============================================
+??  SAVE THIS FILE SECURELY!
+============================================
+
+IMPORTANT NOTES:
+- Store this file in a secure password manager (1Password, LastPass, etc.)
+- DO NOT commit this file to Git
+- If you lose JWT Secret, all existing user tokens will be invalidated
+- If you lose Encryption Key, encrypted data (cards, CVV) cannot be decrypted
+- Backup this file to at least 2 secure locations
+
+Recommended Actions:
+1. Save to password manager immediately
+2. Email to your secure email (encrypted)
+3. Store encrypted backup in cloud storage
+4. Add to Azure Key Vault for production use
+
+============================================
+"@
+    
+    $secretsContent | Out-File -FilePath $secretsFile -Encoding UTF8
+    
+    Write-Success "Secrets saved to: $secretsFile"
+    
+    # Copy PostgreSQL password to clipboard (most immediately needed)
+    try {
+        $Password | Set-Clipboard
+        Write-Success "PostgreSQL password copied to clipboard!"
+        Write-Host "  (JWT Secret and Encryption Key are in the file)" -ForegroundColor Gray
+    }
+    catch {
+        Write-Warning "Could not copy to clipboard"
+    }
+    
+    return $secretsFile
+}
+
+function Get-DatabasePassword {
+    param(
+        [string]$ExistingPassword,
+        [bool]$UseExisting,
+        [ref]$JwtSecretOut,
+        [ref]$EncryptionKeyOut
+    )
+    
+    if ($UseExisting -and -not [string]::IsNullOrEmpty($ExistingPassword)) {
+        Write-Step "Using existing password provided" -Color Cyan
+        Write-Warning "JWT Secret and Encryption Key must be provided separately when using existing password"
+        return $ExistingPassword
+    }
+    
+    # Generate all secrets
+    $password = New-SecurePassword -Length $script:Config.PasswordLength
+    $jwtSecret = New-SecurePassword -Length 64  # JWT needs longer secret
+    $encryptionKey = New-SecurePassword -Length 32
+    
+    Write-Host "Generated Secrets:" -ForegroundColor Yellow
+    Write-Info "PostgreSQL Password" "$($password.Substring(0, 8))..." -Color Yellow
+    Write-Info "JWT Secret" "$($jwtSecret.Substring(0, 8))..." -Color Yellow
+    Write-Info "Encryption Key" "$($encryptionKey.Substring(0, 8))..." -Color Yellow
+    Write-Host "  (Full values saved to file)" -ForegroundColor Gray
     Write-Host ""
     
-    $confirmation = Read-Host "Have you saved these secrets? (yes/no)"
+    # Save all secrets to file
+    $secretsFile = Save-DeploymentSecrets `
+        -Password $password `
+        -JwtSecret $jwtSecret `
+        -EncryptionKey $encryptionKey `
+        -Environment $Environment
+    
+    Write-Host ""
+    Write-Host "?? CRITICAL: Secrets File Location" -ForegroundColor Magenta
+    Write-Host "  $secretsFile" -ForegroundColor White
+    Write-Host ""
+    Write-Host "??  You MUST save these secrets securely!" -ForegroundColor Red
+    Write-Host "  - Add to password manager NOW" -ForegroundColor Yellow
+    Write-Host "  - Backup to secure cloud storage" -ForegroundColor Yellow
+    Write-Host "  - Email encrypted copy to yourself" -ForegroundColor Yellow
+    Write-Host ""
+    
+    $confirmation = Read-Host "Have you saved ALL secrets securely? Type 'yes' to continue"
     if ($confirmation -ne "yes") {
-        Write-Error "Please save the secrets before continuing"
-        exit 1
+        throw "Please save all secrets before continuing. Check file: $secretsFile"
     }
     
-    return $secrets
+    # Return JWT and Encryption Key via reference parameters
+    $JwtSecretOut.Value = $jwtSecret
+    $EncryptionKeyOut.Value = $encryptionKey
+    
+    return $password
+}
+
+function Save-PostgreSqlPassword {
+    param(
+        [string]$ContainerAppName,
+        [string]$ResourceGroup,
+        [string]$Password
+    )
+    
+    Write-Step "Saving PostgreSQL password to Container App..." -Color Cyan
+    
+    Invoke-AzCommand "Updating Container App secret" {
+        az containerapp secret set `
+            --name $ContainerAppName `
+            --resource-group $ResourceGroup `
+            --secrets `
+                "pgadmin-password=$Password" `
+                "pgadmin-email=admin@example.com" `
+            --output none
+    }
+    
+    Write-Success "PostgreSQL password saved to Container App"
 }
 
 function Deploy-Infrastructure {
     param(
-        [string]$ResourceGroupName,
-        [hashtable]$Secrets
+        [string]$Environment,
+        [string]$ResourceGroup,
+        [string]$Location
     )
     
-    Write-Information "Deploying infrastructure using Bicep..."
+    Write-Banner "STEP 1: Deploy Infrastructure" -Color Yellow
     
-    $deploymentName = "banking-infra-$(Get-Date -Format 'yyyyMMddHHmmss')"
-    $mainBicep = Join-Path $bicepPath "main.bicep"
+    $deployScript = Join-Path $script:Paths.ScriptPath "deploy.ps1"
     
-    Write-Information "Starting deployment: $deploymentName"
-    Write-Information "This may take 10-15 minutes..."
-    
-    # Deploy with proper parameter format
-    az deployment group create `
-        --name $deploymentName `
-        --resource-group $ResourceGroupName `
-        --template-file $mainBicep `
-        --parameters environment=$Environment `
-        --parameters location=$Location `
-        --parameters baseName=banking `
-        --parameters postgresAdminUsername=bankingadmin `
-        --parameters "postgresAdminPassword=$($Secrets.postgresAdminPassword)" `
-        --parameters "jwtSecret=$($Secrets.jwtSecret)" `
-        --parameters "encryptionKey=$($Secrets.encryptionKey)" `
-        --parameters apiImageTag=$ImageTag `
-        --parameters minReplicas=0 `
-        --parameters maxReplicas=3 `
-        --parameters enableAppInsights=false `
-        --verbose
-    
-    if ($LASTEXITCODE -ne 0) {
-        Write-Error "Infrastructure deployment failed"
-        exit 1
+    if (Test-Path $deployScript) {
+        Write-Step "Deploying infrastructure using deploy.ps1..." -Color Yellow
+        & $deployScript -Environment $Environment -SkipImageBuild
+    }
+    else {
+        Write-Warning "deploy.ps1 not found, using manual deployment"
+        
+        $rgExists = az group exists --name $ResourceGroup | ConvertFrom-Json
+        if (-not $rgExists) {
+            Invoke-AzCommand "Creating resource group: $ResourceGroup" {
+                az group create `
+                    --name $ResourceGroup `
+                    --location $Location `
+                    --tags Environment=$Environment Project=BankingSystem `
+                    --output none
+            }
+        }
+        
+        Write-Success "Resource group ready"
     }
     
-    Write-Information "? Infrastructure deployed successfully"
-    
-    # Get deployment outputs
-    $outputs = az deployment group show `
-        --name $deploymentName `
-        --resource-group $ResourceGroupName `
-        --query properties.outputs `
-        | ConvertFrom-Json
-    
-    return $outputs
+    Write-Host ""
+    Write-Success "Infrastructure deployment complete!"
+    Write-Host ""
 }
 
-function Build-AndPushImage {
+function Build-DockerImage {
     param(
-        [string]$RegistryLoginServer,
-        [string]$RegistryUsername,
-        [string]$RegistryPassword,
+        [string]$ImageName,
         [string]$ImageTag
     )
     
-    Write-Information "Building and pushing Docker image..."
+    Write-Step "Building Docker image..." -Color Cyan
     
-    $imageName = "$RegistryLoginServer/banking-api:$ImageTag"
-    
-    # Login to ACR
-    Write-Information "Logging in to Azure Container Registry..."
-    az acr login --name ($RegistryLoginServer -split '\.')[0]
-    
-    # Build using ACR Build (faster)
-    Write-Information "Building image in Azure (this may take 5-10 minutes)..."
-    
-    az acr build `
-        --registry ($RegistryLoginServer -split '\.')[0] `
-        --image "banking-api:$ImageTag" `
-        --image "banking-api:latest" `
-        --file "$rootPath\src\BankingSystem.API\Dockerfile" `
-        --platform linux `
-        $rootPath
+    docker build `
+        -t $ImageName `
+        -f $script:Paths.DockerfilePath `
+        --build-arg BUILD_VERSION=$ImageTag `
+        $script:Paths.RootPath
     
     if ($LASTEXITCODE -ne 0) {
-        Write-Error "Image build failed"
-        exit 1
+        throw "Docker build failed!"
     }
     
-    Write-Information "? Image built and pushed successfully"
+    Write-Success "Image built: $ImageName"
 }
 
-function Show-DeploymentSummary {
+function Publish-DockerImage {
     param(
-        [object]$Outputs
+        [string]$DockerHubUsername,
+        [string]$ImageTag
     )
     
-    Write-Host ""
-    Write-Host "============================================" -ForegroundColor Green
-    Write-Host "  DEPLOYMENT COMPLETED SUCCESSFULLY! ??" -ForegroundColor Green
-    Write-Host "============================================" -ForegroundColor Green
-    Write-Host ""
-    Write-Host "API URL:" -ForegroundColor Cyan
-    Write-Host "  $($Outputs.apiUrl.value)" -ForegroundColor White
-    Write-Host ""
-    Write-Host "??  NOTE: Using public Microsoft sample image" -ForegroundColor Yellow
-    Write-Host "    To deploy your app, create Container Registry manually" -ForegroundColor Yellow
-    Write-Host ""
-    Write-Host "PostgreSQL Servers:" -ForegroundColor Cyan
-    Write-Host "  Business: $($Outputs.postgresBusinessFqdn.value)" -ForegroundColor White
-    Write-Host "  Hangfire: $($Outputs.postgresHangfireFqdn.value)" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Redis Cache:" -ForegroundColor Cyan
-    Write-Host "  $($Outputs.redisHostName.value)" -ForegroundColor White
-    Write-Host ""
-    Write-Host "Key Vault:" -ForegroundColor Cyan
-    Write-Host "  $($Outputs.keyVaultUri.value)" -ForegroundColor White
-    Write-Host ""
+    $imageName = "$DockerHubUsername/$($script:Config.ImageRepository):$ImageTag"
+    $latestImage = "$DockerHubUsername/$($script:Config.ImageRepository):latest"
     
-    if ($Outputs.appInsightsConnectionString) {
-        Write-Host "Application Insights:" -ForegroundColor Cyan
-        Write-Host "  Configured ?" -ForegroundColor White
-        Write-Host ""
+    Build-DockerImage -ImageName $imageName -ImageTag $ImageTag
+    
+    Write-Host ""
+    Write-Step "Tagging as latest..." -Color Cyan
+    docker tag $imageName $latestImage
+    
+    Write-Host ""
+    Write-Step "Login to Docker Hub..." -Color Cyan
+    docker login
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "Docker login failed!"
     }
     
-    Write-Host "Next Steps:" -ForegroundColor Yellow
-    Write-Host "  1. Test health endpoint: $($Outputs.apiUrl.value)/health" -ForegroundColor White
-    Write-Host "  2. Access sample app: $($Outputs.apiUrl.value)" -ForegroundColor White
-    Write-Host "  3. To deploy your Banking app:" -ForegroundColor White
-    Write-Host "     - Create Container Registry manually in Azure Portal" -ForegroundColor White
-    Write-Host "     - Build and push your Docker image" -ForegroundColor White
-    Write-Host "     - Update Container App with your image" -ForegroundColor White
-    Write-Host "  4. Check logs in Azure Portal -> Container Apps" -ForegroundColor White
     Write-Host ""
+    Write-Step "Pushing to Docker Hub..." -Color Cyan
+    docker push $imageName
+    docker push $latestImage
+    
+    if ($LASTEXITCODE -ne 0) {
+        throw "Docker push failed!"
+    }
+    
+    Write-Success "Image pushed to Docker Hub"
+    
+    return $imageName
+}
+
+function Update-ContainerAppImage {
+    param(
+        [string]$ContainerAppName,
+        [string]$ResourceGroup,
+        [string]$ImageName
+    )
+    
+    Write-Step "Updating Container App with new image..." -Color Cyan
+    
+    # Ensure Microsoft.App provider is registered
+    $providerState = az provider show `
+        --namespace $script:Config.ProviderNamespace `
+        --query "registrationState" `
+        -o tsv
+    
+    if ($providerState -ne "Registered") {
+        Write-Step "Registering $($script:Config.ProviderNamespace) provider..." -Color Yellow
+        az provider register --namespace $script:Config.ProviderNamespace --wait
+    }
+    
+    Invoke-AzCommand "Updating Container App image" {
+        az containerapp update `
+            --name $ContainerAppName `
+            --resource-group $ResourceGroup `
+            --image $ImageName `
+            --output none
+    }
+    
+    Write-Success "Container App updated with new image"
+}
+
+function Deploy-Application {
+    param(
+        [string]$DockerHubUsername,
+        [string]$ImageTag,
+        [string]$ContainerAppName,
+        [string]$ResourceGroup,
+        [bool]$SkipBuild
+    )
+    
+    Write-Banner "STEP 2: Build & Deploy Application" -Color Yellow
+    
+    if ($SkipBuild) {
+        Write-Warning "Skipping image build"
+        return
+    }
+    
+    $imageName = Publish-DockerImage -DockerHubUsername $DockerHubUsername -ImageTag $ImageTag
+    
+    Write-Host ""
+    Update-ContainerAppImage `
+        -ContainerAppName $ContainerAppName `
+        -ResourceGroup $ResourceGroup `
+        -ImageName $imageName
+    
+    Write-Host ""
+}
+
+function Get-PostgreSQLServer {
+    param(
+        [string]$ResourceGroup
+    )
+    
+    Write-Step "Detecting PostgreSQL server..." -Color Cyan
+    
+    $servers = az postgres flexible-server list `
+        --resource-group $ResourceGroup `
+        --query "[].name" `
+        -o tsv
+    
+    if ([string]::IsNullOrEmpty($servers)) {
+        return $null
+    }
+    
+    $serverArray = $servers -split "`n"
+    $serverName = $serverArray[0].Trim()
+    
+    Write-Success "Found server: $serverName"
+    
+    return $serverName
+}
+
+function Get-ServerFQDN {
+    param(
+        [string]$ServerName,
+        [string]$ResourceGroup
+    )
+    
+    $fqdn = az postgres flexible-server show `
+        --resource-group $ResourceGroup `
+        --name $ServerName `
+        --query "fullyQualifiedDomainName" `
+        -o tsv
+    
+    return $fqdn
+}
+
+function New-ConnectionString {
+    param(
+        [string]$ServerFQDN,
+        [string]$Database,
+        [string]$Username,
+        [string]$Password
+    )
+    
+    return "Host=$ServerFQDN;Database=$Database;Username=$Username;Password=$Password;SSL Mode=Require;Trust Server Certificate=true"
+}
+
+function Sync-DatabasePassword {
+    param(
+        [string]$Password,
+        [string]$ContainerAppName,
+        [string]$ResourceGroup
+    )
+    
+    Write-Banner "STEP 3: Sync Database Password" -Color Yellow
+    
+    $serverName = Get-PostgreSQLServer -ResourceGroup $ResourceGroup
+    
+    if ([string]::IsNullOrEmpty($serverName)) {
+        Write-Warning "No PostgreSQL server found. Skipping password sync."
+        return
+    }
+    
+    $serverFqdn = Get-ServerFQDN -ServerName $serverName -ResourceGroup $ResourceGroup
+    
+    $connString = New-ConnectionString `
+        -ServerFQDN $serverFqdn `
+        -Database $script:Config.DatabaseName `
+        -Username $script:Config.DatabaseUsername `
+        -Password $Password
+    
+    Write-Step "Updating Container App environment variables..." -Color Cyan
+    
+    Invoke-AzCommand "Syncing database password" {
+        az containerapp update `
+            --name $ContainerAppName `
+            --resource-group $ResourceGroup `
+            --set-env-vars `
+                "ConnectionStrings__BusinessDatabase=$connString" `
+                "ConnectionStrings__HangfireDatabase=$connString" `
+            --output none
+    }
+    
+    Write-Success "Password synced to Container App"
+    Write-Host ""
+}
+
+function Test-Deployment {
+    param(
+        [string]$ContainerAppName,
+        [string]$ResourceGroup
+    )
+    
+    Write-Banner "STEP 4: Verify Deployment" -Color Yellow
+    
+    Write-Step "Waiting for Container App to restart ($($script:Config.RestartWaitTime) seconds)..." -Color Cyan
+    Start-Sleep -Seconds $script:Config.RestartWaitTime
+    
+    $apiUrl = az containerapp show `
+        --name $ContainerAppName `
+        --resource-group $ResourceGroup `
+        --query "properties.configuration.ingress.fqdn" `
+        -o tsv
+    
+    $fullUrl = "https://$apiUrl"
+    
+    Write-Host ""
+    Write-Step "Testing health endpoint..." -Color Cyan
+    
+    try {
+        $health = Invoke-RestMethod "$fullUrl/health" -TimeoutSec $script:Config.HealthCheckTimeout
+        
+        Write-Host ""
+        Write-Banner "? DEPLOYMENT SUCCESSFUL!" -Color Green
+        
+        Write-Host "API URL: $fullUrl" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Health Check Result:" -ForegroundColor Yellow
+        $health | ConvertTo-Json
+        Write-Host ""
+        Write-Host "Endpoints:" -ForegroundColor Yellow
+        Write-Info "Health" "$fullUrl/health"
+        Write-Info "Swagger" "$fullUrl/swagger"
+        Write-Info "Register" "$fullUrl/api/auth/register"
+        Write-Host ""
+    }
+    catch {
+        Write-Host ""
+        Write-Warning "Health check failed: $($_.Exception.Message)"
+        Write-Host ""
+        Write-Host "Check logs:" -ForegroundColor Cyan
+        Write-Info "Command" "az containerapp logs show --name $ContainerAppName --resource-group $ResourceGroup --follow"
+        Write-Host ""
+        Write-Host "Try health check again:" -ForegroundColor Cyan
+        Write-Info "Command" "Invoke-RestMethod '$fullUrl/health'"
+        Write-Host ""
+    }
 }
 
 # ============================================================================
 # MAIN EXECUTION
 # ============================================================================
 
-try {
-    # Step 1: Validate prerequisites
-    Test-AzureCLI
-    
-    # Step 2: Connect to Azure
-    $subscriptionId = Connect-AzureSubscription
-    
-    # Step 3: Create resource group
-    New-ResourceGroupIfNotExists -Name $ResourceGroupName -Location $Location
-    
-    # Step 4: Generate secrets
-    $secrets = New-DeploymentSecrets
-    
-    # Step 5: Deploy infrastructure (unless skipped)
-    if (-not $SkipInfrastructure) {
-        $outputs = Deploy-Infrastructure -ResourceGroupName $ResourceGroupName -Secrets $secrets
-    }
-    else {
-        Write-Information "??  Skipping infrastructure deployment"
+function Main {
+    try {
+        # Display deployment configuration
+        Write-Banner "?? Banking System Complete Deployment" -Color Cyan
         
-        # Get existing deployment outputs
-        $latestDeployment = az deployment group list `
-            --resource-group $ResourceGroupName `
-            --query "[?starts_with(name, 'banking-infra')] | sort_by(@, &properties.timestamp) | [-1]" `
-            | ConvertFrom-Json
+        Write-Info "Environment" $Environment
+        Write-Info "Mode" $DeployMode
+        Write-Info "Docker Hub" $DockerHubUsername
+        Write-Info "Image Tag" $ImageTag
+        Write-Host ""
         
-        $outputs = az deployment group show `
-            --name $latestDeployment.name `
-            --resource-group $ResourceGroupName `
-            --query properties.outputs `
-            | ConvertFrom-Json
+        # Initialize secret variables
+        $postgresPassword = ""
+        $jwtSecret = ""
+        $encryptionKey = ""
+        
+        # Step 1: Deploy Infrastructure
+        if ($DeployMode -in @('infrastructure', 'all')) {
+            # Generate or get secrets
+            $jwtSecretRef = [ref]""]
+            $encryptionKeyRef = [ref]""]
+            
+            $postgresPassword = Get-DatabasePassword `
+                -ExistingPassword $ExistingPassword `
+                -UseExisting $UseExistingPassword `
+                -JwtSecretOut $jwtSecretRef `
+                -EncryptionKeyOut $encryptionKeyRef
+            
+            $jwtSecret = $jwtSecretRef.Value
+            $encryptionKey = $encryptionKeyRef.Value
+            
+            Write-Host ""
+            Write-Info "Secrets generated" "? All secrets ready for deployment" -Color Green
+            Write-Host ""
+            
+            Deploy-Infrastructure `
+                -Environment $Environment `
+                -ResourceGroup $ResourceGroup `
+                -Location $Location
+        }
+        
+        # Step 2: Build and Deploy Application
+        if ($DeployMode -in @('app', 'all')) {
+            Deploy-Application `
+                -DockerHubUsername $DockerHubUsername `
+                -ImageTag $ImageTag `
+                -ContainerAppName $ContainerAppName `
+                -ResourceGroup $ResourceGroup `
+                -SkipBuild $SkipImageBuild
+            
+            # Step 3: Sync Database Password
+            if ([string]::IsNullOrEmpty($postgresPassword)) {
+                if ($UseExistingPassword -and -not [string]::IsNullOrEmpty($ExistingPassword)) {
+                    $postgresPassword = $ExistingPassword
+                }
+                else {
+                    $postgresPassword = Get-PasswordInteractive
+                }
+            }
+            
+            Sync-DatabasePassword `
+                -Password $postgresPassword `
+                -ContainerAppName $ContainerAppName `
+                -ResourceGroup $ResourceGroup
+        }
+        
+        # Step 4: Verify Deployment
+        Test-Deployment `
+            -ContainerAppName $ContainerAppName `
+            -ResourceGroup $ResourceGroup
+        
+        Write-Host ""
+        Write-Success "?? Deployment process complete!"
+        Write-Host ""
+        
+        # Final reminder about secrets
+        if (-not [string]::IsNullOrEmpty($jwtSecret)) {
+            Write-Host "?? REMINDER: Secrets File Location" -ForegroundColor Cyan
+            Write-Host "  Check your workspace root for: deployment-secrets-*.txt" -ForegroundColor White
+            Write-Host "  This file contains ALL critical secrets (DB, JWT, Encryption)" -ForegroundColor White
+            Write-Host ""
+        }
     }
-    
-    # Step 6: Build and push image (unless skipped)
-    if (-not $SkipImageBuild) {
-        Build-AndPushImage `
-            -RegistryLoginServer $outputs.containerRegistryLoginServer.value `
-            -RegistryUsername $outputs.containerRegistryAdminUsername.value `
-            -RegistryPassword "dummy" `
-            -ImageTag $ImageTag
+    catch {
+        Write-Host ""
+        Write-Host "? Deployment failed: $($_.Exception.Message)" -ForegroundColor Red
+        Write-Host ""
+        Write-Host $_.ScriptStackTrace -ForegroundColor Red
+        exit 1
     }
-    else {
-        Write-Information "??  Skipping image build"
-    }
-    
-    # Step 7: Show summary
-    Show-DeploymentSummary -Outputs $outputs
-    
-    Write-Host "? Deployment completed successfully!" -ForegroundColor Green
-    exit 0
 }
-catch {
-    Write-Error "Deployment failed: $_"
-    Write-Error $_.ScriptStackTrace
-    exit 1
-}
+
+# Execute main function
+Main

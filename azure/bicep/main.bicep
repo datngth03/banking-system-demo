@@ -64,11 +64,21 @@ param enableAppInsights bool = true
 @description('Enable monitoring stack (Prometheus, Grafana)')
 param enableMonitoringStack bool = false
 
+@description('Enable Redis Cache (disable to skip Redis for faster deployment)')
+param enableRedis bool = true
+
+@description('Timestamp for unique naming (avoid conflicts with deleted resources)')
+param deploymentTimestamp string = utcNow('yyyyMMddHHmm')
+
+@description('Use timestamp suffix to avoid naming conflicts (set to false for stable resource names)')
+param useTimestampSuffix bool = false
+
 // ============================================================================
 // VARIABLES
 // ============================================================================
 
 var resourceNamePrefix = '${baseName}-${environment}'
+var uniqueSuffix = useTimestampSuffix ? take(uniqueString(resourceGroup().id, deploymentTimestamp), 6) : take(uniqueString(resourceGroup().id), 6)
 var tags = {
   Environment: environment
   Project: 'BankingSystem'
@@ -97,7 +107,7 @@ module containerRegistry 'modules/container-registry.bicep' = {
 module keyVault 'modules/keyvault.bicep' = {
   name: 'keyVault-deployment'
   params: {
-    name: '${resourceNamePrefix}-kv'
+    name: '${resourceNamePrefix}-kv-${uniqueSuffix}'  // Add unique suffix to avoid soft-delete conflict
     location: location
     tags: tags
     secrets: [
@@ -117,7 +127,7 @@ module keyVault 'modules/keyvault.bicep' = {
 module postgresqlBusiness 'modules/postgresql.bicep' = {
   name: 'postgresql-business-deployment'
   params: {
-    name: '${resourceNamePrefix}-db'
+    name: '${resourceNamePrefix}-db-${uniqueSuffix}'  // Add unique suffix
     location: location
     tags: union(tags, { Database: 'Business' })
     adminUsername: postgresAdminUsername
@@ -135,7 +145,7 @@ module postgresqlBusiness 'modules/postgresql.bicep' = {
 module postgresqlHangfire 'modules/postgresql.bicep' = {
   name: 'postgresql-hangfire-deployment'
   params: {
-    name: '${resourceNamePrefix}-hangfire'
+    name: '${resourceNamePrefix}-hangfire-${uniqueSuffix}'  // Add unique suffix
     location: location
     tags: union(tags, { Database: 'Hangfire' })
     adminUsername: postgresAdminUsername
@@ -149,11 +159,11 @@ module postgresqlHangfire 'modules/postgresql.bicep' = {
   }
 }
 
-// Redis Cache - Always Basic C0 (smallest, cheapest)
-module redis 'modules/redis.bicep' = {
+// Redis Cache - Only deploy if enabled
+module redis 'modules/redis.bicep' = if (enableRedis) {
   name: 'redis-deployment'
   params: {
-    name: '${resourceNamePrefix}-redis'
+    name: '${resourceNamePrefix}-redis-${uniqueSuffix}'  // Add unique suffix to avoid DNS conflict
     location: location
     tags: tags
     sku: 'Basic'  // Always Basic - cheapest
@@ -235,8 +245,8 @@ module bankingApi 'modules/container-app.bicep' = {
         secretRef: 'db-hangfire-connection'
       }
       {
-        name: 'ConnectionStrings__Redis'
-        secretRef: 'redis-connection'
+       name: 'ConnectionStrings__Redis'
+       secretRef: 'redis-connection'
       }
       {
         name: 'JwtSettings__Secret'
@@ -282,40 +292,31 @@ module bankingApi 'modules/container-app.bicep' = {
       }
       {
         name: 'redis-connection'
-        value: '${redis.outputs.hostName}:${redis.outputs.sslPort},password=${redis.outputs.primaryKey},ssl=True,abortConnect=False'
+        value: 'localhost:6379,ssl=False'  // Default placeholder - will be updated if Redis is enabled
       }
       {
         name: 'jwt-secret'
-        keyVaultUrl: '${keyVault.outputs.vaultUri}secrets/jwt-secret'
+        value: jwtSecret
       }
       {
         name: 'encryption-key'
-        keyVaultUrl: '${keyVault.outputs.vaultUri}secrets/encryption-key'
+        value: encryptionKey
       }
     ]
   }
   dependsOn: [
     postgresqlBusiness
     postgresqlHangfire
-    redis
     keyVault
   ]
 }
 
-// Update Key Vault with connection strings
-module keyVaultSecrets 'modules/keyvault-secrets.bicep' = {
-  name: 'keyVaultSecrets-deployment'
+// Update Redis connection secret if Redis is enabled
+module updateRedisSecret 'modules/keyvault-secrets.bicep' = if (enableRedis) {
+  name: 'updateRedisSecret-deployment'
   params: {
     keyVaultName: keyVault.outputs.name
     secrets: [
-      {
-        name: 'db-business-connection'
-        value: 'Host=${postgresqlBusiness.outputs.fqdn};Port=5432;Database=BankingSystemDb;Username=${postgresAdminUsername};Password=${postgresAdminPassword};SSL Mode=Require;Trust Server Certificate=true'
-      }
-      {
-        name: 'db-hangfire-connection'
-        value: 'Host=${postgresqlHangfire.outputs.fqdn};Port=5432;Database=BankingSystemHangfire;Username=${postgresAdminUsername};Password=${postgresAdminPassword};SSL Mode=Require;Trust Server Certificate=true'
-      }
       {
         name: 'redis-connection'
         value: '${redis.outputs.hostName}:${redis.outputs.sslPort},password=${redis.outputs.primaryKey},ssl=True,abortConnect=False'
@@ -323,21 +324,7 @@ module keyVaultSecrets 'modules/keyvault-secrets.bicep' = {
     ]
   }
   dependsOn: [
-    postgresqlBusiness
-    postgresqlHangfire
     redis
-  ]
-}
-
-// Grant Container App Managed Identity access to Key Vault
-module keyVaultAccessPolicy 'modules/keyvault-access.bicep' = {
-  name: 'keyVaultAccess-deployment'
-  params: {
-    keyVaultName: keyVault.outputs.name
-    principalId: bankingApi.outputs.managedIdentityPrincipalId
-  }
-  dependsOn: [
-    bankingApi
     keyVault
   ]
 }

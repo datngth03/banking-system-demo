@@ -57,6 +57,11 @@ secrets.json
 .env.local
 .env.*.local
 
+# Azure Deployment Secrets
+secrets-*.txt
+*.secrets.txt
+deployment-secrets-*.txt
+
 # Database files
 *.db
 *.db-shm

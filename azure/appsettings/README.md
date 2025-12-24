@@ -4,7 +4,7 @@ Configuration files optimized for Azure deployment.
 
 ## ?? Files
 
-- **appsettings.Azure.Development.json** - Development/Staging configuration
+- **appsettings.Azure.Development.json** - Development configuration
 - **appsettings.Azure.Production.json** - Production configuration
 
 ## ?? Usage
