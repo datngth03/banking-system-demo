@@ -15,6 +15,17 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.Property(t => t.Description).HasMaxLength(500);
         builder.Property(t => t.TransactionDate).IsRequired();
         builder.Property(t => t.CreatedAt).IsRequired();
+        builder.Property(t => t.UpdatedAt).IsRequired();
+        builder.Property(t => t.Status).HasMaxLength(50).IsRequired().HasDefaultValue("completed");
+
+        // Stripe Payment Fields
+        builder.Property(t => t.StripePaymentId).HasMaxLength(100);
+        builder.Property(t => t.PaymentStatus);
+        builder.Property(t => t.PaymentMethod).HasMaxLength(50).HasDefaultValue("Internal");
+        builder.Property(t => t.ExternalReferenceId).HasMaxLength(100);
+        builder.Property(t => t.Currency).HasMaxLength(3).HasDefaultValue("USD");
+        builder.Property(t => t.Type).IsRequired();
+        builder.Property(t => t.Reference).HasMaxLength(100);
 
         // Configure Amount value object
         builder.OwnsOne(t => t.Amount, money =>
@@ -73,5 +84,28 @@ public class TransactionConfiguration : IEntityTypeConfiguration<Transaction>
         builder.HasIndex(t => new { t.AccountId, t.CreatedAt })
             .HasDatabaseName("IX_Transactions_AccountId_CreatedAt")
             .IsDescending();
+
+        // ============ INDEXES FOR STRIPE PAYMENT INTEGRATION ============
+
+        // Index for Stripe payment ID (lookup by payment ID from webhooks)
+        builder.HasIndex(t => t.StripePaymentId)
+            .HasDatabaseName("IX_Transactions_StripePaymentId");
+
+        // Index for external reference ID (webhook correlation)
+        builder.HasIndex(t => t.ExternalReferenceId)
+            .HasDatabaseName("IX_Transactions_ExternalReferenceId");
+
+        // Index for payment status (query payments by status)
+        builder.HasIndex(t => t.PaymentStatus)
+            .HasDatabaseName("IX_Transactions_PaymentStatus");
+
+        // Index for user ID + payment method (user card payment history)
+        builder.HasIndex(t => new { t.UserId, t.PaymentMethod })
+            .HasDatabaseName("IX_Transactions_UserId_PaymentMethod");
+
+        // Composite index for pending payments (webhook processing)
+        builder.HasIndex(t => new { t.PaymentStatus, t.CreatedAt })
+            .HasDatabaseName("IX_Transactions_PaymentStatus_CreatedAt");
     }
+
 }

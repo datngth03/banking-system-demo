@@ -8,5 +8,6 @@ public enum TransactionType
     BillPayment,
     InterestCredit,
     Fee,
-    Refund
+    Refund,
+    CardCharge       // Direct card payment via Stripe
 }

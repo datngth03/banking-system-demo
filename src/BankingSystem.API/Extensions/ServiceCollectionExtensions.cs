@@ -9,11 +9,10 @@ public static class ServiceCollectionExtensions
 {
     public static IServiceCollection AddBankingSystemServices(
         this IServiceCollection services, 
-        IConfiguration configuration,
-        Microsoft.Extensions.Hosting.IHostEnvironment environment)
+        IConfiguration configuration)
     {
         services.AddApplicationServices();
-        services.AddInfrastructureServices(configuration, environment);
+        services.AddInfrastructureServices(configuration);
         return services;
     }
 }

@@ -99,6 +99,73 @@ public class CacheService : ICacheService
         await Task.CompletedTask;
     }
 
+    public async Task<bool> ExistsAsync(string key, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            var value = await _distributedCache.GetAsync(key, cancellationToken);
+            return value != null;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error checking cache existence for key: {Key}", key);
+            return false;
+        }
+    }
+
+    public async Task<T?> GetOrCreateAsync<T>(
+        string key,
+        Func<CancellationToken, Task<T>> factory,
+        TimeSpan? expiration = null,
+        CancellationToken cancellationToken = default) where T : class
+    {
+        // Try to get from cache first
+        var cachedValue = await GetAsync<T>(key, cancellationToken);
+        if (cachedValue != null)
+        {
+            return cachedValue;
+        }
+
+        // If not in cache, create using factory
+        _logger.LogDebug("Cache miss for key: {Key}, creating new value", key);
+        var value = await factory(cancellationToken);
+
+        if (value != null)
+        {
+            await SetAsync(key, value, expiration, cancellationToken);
+        }
+
+        return value;
+    }
+
+    public async Task RefreshAsync(string key, TimeSpan? expiration = null, CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            await _distributedCache.RefreshAsync(key, cancellationToken);
+            _logger.LogDebug("Cache refreshed for key: {Key}", key);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error refreshing cache for key: {Key}", key);
+        }
+    }
+
+    public async Task ClearAllAsync(CancellationToken cancellationToken = default)
+    {
+        try
+        {
+            // Note: IDistributedCache doesn't have a built-in clear all
+            // This requires direct Redis connection
+            _logger.LogWarning("ClearAll not implemented - requires direct Redis connection");
+            await Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error clearing all cache");
+        }
+    }
+
     private static string GetCacheType(string key)
     {
         // Extract cache type from key (e.g., "account:123" -> "account")

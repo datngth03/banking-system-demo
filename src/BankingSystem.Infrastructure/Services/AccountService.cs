@@ -1,26 +1,29 @@
 namespace BankingSystem.Infrastructure.Services;
 
+using BankingSystem.Application.DTOs.Accounts;
 using BankingSystem.Application.Interfaces;
+using BankingSystem.Infrastructure.Caching;
 using BankingSystem.Infrastructure.Persistence;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Logging;
-using Microsoft.Extensions.Caching.Distributed;
-using System.Text.Json;
 
+/// <summary>
+/// Implementation of IAccountService
+/// </summary>
 public class AccountService : IAccountService
 {
     private readonly BankingSystemDbContext _context;
     private readonly ILogger<AccountService> _logger;
-    private readonly IDistributedCache _cache;
+    private readonly ICacheService _cacheService;
 
     public AccountService(
         BankingSystemDbContext context,
         ILogger<AccountService> logger,
-        IDistributedCache cache)
+        ICacheService cacheService)
     {
         _context = context;
         _logger = logger;
-        _cache = cache;
+        _cacheService = cacheService;
     }
 
     public async Task<bool> AccountExistsAsync(Guid accountId)
@@ -33,63 +36,85 @@ public class AccountService : IAccountService
         return await _context.Accounts.AnyAsync(a => a.AccountNumber == accountNumber);
     }
 
-    public async Task<dynamic?> GetAccountByIdAsync(Guid accountId)
+    public async Task<AccountDto?> GetAccountByIdAsync(Guid accountId)
     {
-        var cacheKey = $"account:{accountId}";
+        var cacheKey = CacheKeys.GetAccountKey(accountId);
 
         // Try cache first
-        var cachedAccount = await _cache.GetStringAsync(cacheKey);
+        var cachedAccount = await _cacheService.GetAsync<AccountDto>(cacheKey);
         if (cachedAccount != null)
         {
             _logger.LogInformation("Account {AccountId} retrieved from cache", accountId);
-            return JsonSerializer.Deserialize<dynamic>(cachedAccount);
+            return cachedAccount;
         }
 
         var account = await _context.Accounts
             .AsNoTracking()
             .Where(a => a.Id == accountId)
-            .Select(a => new
+            .Select(a => new AccountDto
             {
-                a.Id,
-                a.AccountNumber,
-                a.AccountType,
+                Id = a.Id,
+                AccountNumber = a.AccountNumber,
+                AccountType = a.AccountType.ToString(),
                 Balance = a.Balance.Amount,
                 Currency = a.Balance.Currency,
-                a.IsActive,
-                a.CreatedAt
+                IsActive = a.IsActive,
+                CreatedAt = a.CreatedAt,
+                IBAN = a.IBAN,
+                BIC = a.BIC,
+                UserId = a.UserId
             })
             .FirstOrDefaultAsync();
 
         if (account != null)
         {
-            // Cache for 5 minutes
-            await _cache.SetStringAsync(cacheKey, JsonSerializer.Serialize(account), new DistributedCacheEntryOptions
-            {
-                AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(5)
-            });
-            _logger.LogInformation("Account {AccountId} cached", accountId);
+            await _cacheService.SetAsync(cacheKey, account, TimeSpan.FromHours(1));
+        }
+        else
+        {
+            _logger.LogDebug("Account {AccountId} not found", accountId);
         }
 
         return account;
     }
 
-    public async Task<IEnumerable<dynamic>> GetUserAccountsAsync(Guid userId)
+    public async Task<IEnumerable<AccountDto>> GetUserAccountsAsync(Guid userId)
     {
+        var cacheKey = CacheKeys.GetUserAccountsKey(userId);
+
+        // Try cache first
+        var cachedAccounts = await _cacheService.GetAsync<List<AccountDto>>(cacheKey);
+        if (cachedAccounts != null && cachedAccounts.Any())
+        {
+            _logger.LogInformation("User {UserId} accounts retrieved from cache", userId);
+            return cachedAccounts;
+        }
+
         var accounts = await _context.Accounts
             .AsNoTracking()
-            .Where(a => a.UserId == userId)
-            .Select(a => new
+            .Where(a => a.UserId == userId && a.IsActive)
+            .Select(a => new AccountDto
             {
-                a.Id,
-                a.AccountNumber,
-                a.AccountType,
+                Id = a.Id,
+                AccountNumber = a.AccountNumber,
+                AccountType = a.AccountType.ToString(),
                 Balance = a.Balance.Amount,
                 Currency = a.Balance.Currency,
-                a.IsActive,
-                a.CreatedAt
+                IsActive = a.IsActive,
+                CreatedAt = a.CreatedAt,
+                IBAN = a.IBAN,
+                BIC = a.BIC,
+                UserId = a.UserId
             })
             .ToListAsync();
 
+        // Cache the results
+        if (accounts.Any())
+        {
+            await _cacheService.SetAsync(cacheKey, accounts, TimeSpan.FromHours(1));
+        }
+
+        _logger.LogDebug("Retrieved {Count} accounts for user {UserId}", accounts.Count, userId);
         return accounts;
     }
 
@@ -97,15 +122,21 @@ public class AccountService : IAccountService
     {
         var account = await _context.Accounts
             .AsNoTracking()
-            .Where(a => a.Id == accountId)
-            .FirstOrDefaultAsync();
+            .FirstOrDefaultAsync(a => a.Id == accountId);
 
-        if (account is null)
+        if (account == null)
         {
-            _logger.LogWarning("Account with ID {AccountId} not found", accountId);
+            _logger.LogWarning("Account {AccountId} not found", accountId);
             return 0;
         }
 
         return account.Balance.Amount;
+    }
+
+    public async Task<decimal> GetAvailableCreditAsync(Guid accountId)
+    {
+        // TODO: Implement based on account type and credit limits
+        var balance = await GetAccountBalanceAsync(accountId);
+        return balance;
     }
 }

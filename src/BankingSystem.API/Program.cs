@@ -18,7 +18,7 @@ builder.Services.AddControllers();
 builder.Services.AddEndpointsApiExplorer();
 
 // Add BankingSystem services
-builder.Services.AddBankingSystemServices(builder.Configuration, builder.Environment);
+builder.Services.AddBankingSystemServices(builder.Configuration);
 builder.Services.AddBankingSystemSwagger();
 builder.Services.AddBankingSystemCors(builder.Configuration);
 builder.Services.AddBankingSystemHealthChecks(builder.Configuration);

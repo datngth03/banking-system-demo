@@ -27,11 +27,24 @@ public class JwtService : IJwtService
     {
         var claims = new[]
         {
+            // Identity claims
             new Claim(JwtRegisteredClaimNames.Sub, user.Id.ToString()),
-            new Claim(JwtRegisteredClaimNames.Email, user.Email),
+            new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
+
+            // Contact claims
+            new Claim(ClaimTypes.Email, user.Email),
+            new Claim("email", user.Email), // Also include standard JWT email claim
+
+            // Name claims
+            new Claim(ClaimTypes.Name, $"{user.FirstName} {user.LastName}"),
+            new Claim("full_name", $"{user.FirstName} {user.LastName}"),
             new Claim(JwtRegisteredClaimNames.GivenName, user.FirstName),
             new Claim(JwtRegisteredClaimNames.FamilyName, user.LastName),
+
+            // Role claim
             new Claim(ClaimTypes.Role, user.Role.ToString()),
+
+            // JWT identifier
             new Claim(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString())
         };
 

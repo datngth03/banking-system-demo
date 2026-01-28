@@ -47,6 +47,12 @@ docker-compose --profile full up -d
 - Transaction processing (deposit, withdraw, transfer)
 - Card management (Visa, Mastercard)
 - Bill payments with scheduling
+- **Card Payment Processing via Stripe** ✨ (Test Mode)
+  - Direct card charges with idempotency
+  - Bill payments with cards
+  - Full and partial refunds
+  - Webhook-based status updates
+  - Complete audit trail with Stripe IDs
 - Real-time notifications
 - Complete audit logging
 
@@ -64,39 +70,112 @@ docker-compose --profile full up -d
 
 ## 🏗️ Architecture
 
+### Layered Clean Architecture
+
 ```
-┌─────────────────────────────────────────┐
-│         Banking System API              │
-│          (.NET 8 Web API)               │
-└──────────────┬──────────────────────────┘
-               │
-     ┌─────────┴─────────┐
-     │                   │
-┌────▼──────┐   ┌────────▼─────────┐
-│Application│   │Infrastructure    │
-│  (CQRS)   │   │(EF Core, Redis)  │
-│ Commands  │   │  - PostgreSQL    │
-│ Queries   │   │  - Hangfire      │
-│ Handlers  │   │  - Services      │
-└────┬──────┘   └────────┬─────────┘
-     │                   │
-     └─────────┬─────────┘
-               │
-        ┌──────▼──────┐
-        │   Domain    │
-        │  Entities   │
-        │ Value Obj   │
-        │ Interfaces  │
-        └─────────────┘
+┌─────────────────────────────────────────────────────────────┐
+│                    PRESENTATION LAYER                       │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  BankingSystem.API (.NET 8 Web API)                  │   │
+│  │  ├─ Controllers (REST Endpoints)                      │   │
+│  │  ├─ Middleware (Auth, Logging, Error Handling)       │   │
+│  │  ├─ Validators (Input Validation)                    │   │
+│  │  └─ Filters (Authorization, Rate Limiting)           │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+┌─────────────────────────────────────────────────────────────┐
+│                   APPLICATION LAYER                         │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  BankingSystem.Application (CQRS + MediatR)          │   │
+│  │  ├─ Commands (State-Changing Operations)             │   │
+│  │  ├─ Queries (Read-Only Operations)                   │   │
+│  │  ├─ Handlers (Business Logic Orchestration)          │   │
+│  │  ├─ DTOs (Data Transfer Objects)                     │   │
+│  │  └─ Mappings (AutoMapper)                            │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+┌─────────────────────────────────────────────────────────────┐
+│                    DOMAIN LAYER                             │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  BankingSystem.Domain (Business Rules)               │   │
+│  │  ├─ Entities (User, Account, Transaction, Card)      │   │
+│  │  ├─ Value Objects (Money, IBAN, AccountNumber)       │   │
+│  │  ├─ Enums (TransactionType, CardStatus)              │   │
+│  │  ├─ Interfaces (Repository, Service Contracts)       │   │
+│  │  ├─ Domain Events (AccountCreated, TransferMade)     │   │
+│  │  └─ Business Rules (Validation, Constraints)         │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+┌─────────────────────────────────────────────────────────────┐
+│                 INFRASTRUCTURE LAYER                        │
+│  ┌──────────────────────────────────────────────────────┐   │
+│  │  BankingSystem.Infrastructure (Data Access)          │   │
+│  │  ├─ Data                                              │   │
+│  │  │  ├─ EF Core DbContext                              │   │
+│  │  │  ├─ Repository Pattern                             │   │
+│  │  │  └─ Database Migrations                            │   │
+│  │  ├─ Cache                                             │   │
+│  │  │  └─ Redis Service (IDistributedCache)              │   │
+│  │  ├─ Background Jobs                                   │   │
+│  │  │  └─ Hangfire Service (Job Scheduling)              │   │
+│  │  ├─ External Services                                 │   │
+│  │  │  ├─ Notification Service (Email, SMS)              │   │
+│  │  │  ├─ Encryption Service (AES-256)                   │   │
+│  │  │  └─ Payment Gateway Integration                    │   │
+│  │  └─ Logging & Monitoring                              │   │
+│  │     ├─ Serilog (Structured Logging)                   │   │
+│  │     └─ Prometheus Metrics                             │   │
+│  └──────────────────────────────────────────────────────┘   │
+└─────────────────────────────────────────────────────────────┘
+                            │
+┌─────────────────────────────────────────────────────────────┐
+│                  PERSISTENCE LAYER                          │
+│  ┌─────────────────────┐  ┌──────────────┐  ┌────────────┐ │
+│  │  PostgreSQL 16      │  │   Redis 7    │  │  Hangfire  │ │
+│  │  (Business DB)      │  │   (Cache)    │  │  (Jobs DB) │ │
+│  │                     │  │              │  │            │ │
+│  │  ✓ Transactions     │  │ ✓ Sessions   │  │ ✓ Scheduled│ │
+│  │  ✓ Accounts         │  │ ✓ Caching    │  │   Jobs     │ │
+│  │  ✓ Users            │  │              │  │            │ │
+│  │  ✓ Audit Logs       │  │              │  │            │ │
+│  └─────────────────────┘  └──────────────┘  └────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### Data Flow
+
+```
+Client Request → API Controller → Middleware/Auth
+                    ↓
+            MediatR Dispatcher
+                    ↓
+        Command/Query Handler
+                    ↓
+        Domain Logic (Entities/Services)
+                    ↓
+        Repository (EF Core)
+                    ↓
+        Database/Cache/External Services
+                    ↓
+            Response ← DTO Mapping ← Domain Model
 ```
 
 **Stack:**
 - **Backend:** .NET 8, ASP.NET Core Web API
+- **Architecture Pattern:** Clean Architecture with CQRS
+- **Mediator:** MediatR (Command/Query Bus)
+- **ORM:** Entity Framework Core
 - **Database:** PostgreSQL 16 (Business + Hangfire)
 - **Cache:** Redis 7
-- **Monitoring:** Prometheus, Grafana, Seq, Application Insights
 - **Background Jobs:** Hangfire
-- **Patterns:** Clean Architecture, CQRS, MediatR, Repository
+- **Validation:** FluentValidation
+- **Logging:** Serilog + Seq
+- **Monitoring:** Prometheus, Grafana, Application Insights
+- **Encryption:** AES-256 (Sensitive Data)
+- **Authentication:** JWT with Refresh Tokens
 
 ---
 
@@ -205,9 +284,37 @@ dotnet run
 | | `/api/accounts/transfer` | POST | Yes |
 | **Cards** | `/api/cards/my-cards` | GET | Yes |
 | | `/api/cards/issue` | POST | Yes |
+| **Payments** | `/api/v1/payments/charge` | POST | Yes |
+| | `/api/v1/payments/pay-bill` | POST | Yes |
+| | `/api/v1/payments/{id}/refund` | POST | Yes |
+| | `/api/v1/payments/webhook` | POST | No |
 | **Other** |...|...|...|
 
 **Swagger UI:** http://localhost:5000/swagger
+
+### Payment Integration (Stripe Test Mode)
+
+The Banking System integrates with Stripe to process card payments in a safe test environment.
+
+**Features:**
+- ✅ Direct card charges via `/api/v1/payments/charge`
+- ✅ Bill payments with cards via `/api/v1/payments/pay-bill`
+- ✅ Full and partial refunds via `/api/v1/payments/{id}/refund`
+- ✅ Webhook-based payment status updates
+- ✅ Complete transaction audit trail with Stripe IDs
+
+**Getting Started:**
+1. Create a Stripe test account: https://dashboard.stripe.com/register
+2. Get your API keys from Stripe Dashboard
+3. Add keys to environment:
+   ```bash
+   export STRIPE_SECRET_KEY=sk_test_...
+   export STRIPE_PUBLISHABLE_KEY=pk_test_...
+   export STRIPE_WEBHOOK_SECRET=whsec_...
+   ```
+4. Test with card: `4242 4242 4242 4242` (expires: 12/25, CVC: 123)
+
+**Documentation:** See [PAYMENT-INTEGRATION.md](docs/PAYMENT-INTEGRATION.md) for complete guide.
 
 ---
 
